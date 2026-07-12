@@ -1,0 +1,70 @@
+name: moodle-ai-coderunner-lab
+
+services:
+  db:
+    image: mariadb:11.4.12
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      TZ: ${TZ}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  jobe:
+    build:
+      context: https://github.com/trampgeek/jobeinabox.git#7727d8f071dda3a0a54e95328646a5c9cc95423f
+      args:
+        JOBE_VERSION: v2.2.2
+        TZ: ${TZ}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/bin/python3", "/var/www/html/jobe/minimaltest.py"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  moodle:
+    build:
+      context: .
+      dockerfile: moodle/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      jobe:
+        condition: service_healthy
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      MOODLE_URL: ${MOODLE_URL}
+      MOODLE_SITE_NAME: ${MOODLE_SITE_NAME}
+      MOODLE_ADMIN_USER: ${MOODLE_ADMIN_USER}
+      MOODLE_ADMIN_PASSWORD: ${MOODLE_ADMIN_PASSWORD}
+      MOODLE_ADMIN_EMAIL: ${MOODLE_ADMIN_EMAIL}
+      TZ: ${TZ}
+    ports:
+      - "${MOODLE_PORT}:80"
+    volumes:
+      - moodledata:/var/www/moodledata
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+
+volumes:
+  db_data:
+  moodledata:
+
