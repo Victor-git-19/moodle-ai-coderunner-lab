@@ -53,6 +53,23 @@ docker compose exec -T moodle php /var/www/html/admin/cli/cfg.php \
     --component=qtype_coderunner --name=jobe_host | grep -qx 'jobe'
 echo "CodeRunner plugin: OK"
 
+docker compose exec -T moodle php -r '
+define("CLI_SCRIPT", true);
+require "/var/www/html/config.php";
+require_once $CFG->dirroot . "/question/type/coderunner/classes/sandbox.php";
+$sandbox = qtype_coderunner_sandbox::get_instance("jobesandbox");
+$result = $sandbox->execute(
+    "print(\"Hello from CodeRunner\")\n",
+    "python3",
+    "",
+    null,
+    null,
+    false
+);
+exit($result->error === 0 && $result->output === "Hello from CodeRunner\n" ? 0 : 1);
+'
+echo "CodeRunner to Jobe execution: OK"
+
 docker compose exec -T moodle test -f /var/www/html/public/local/aicodehelper/version.php
 docker compose exec -T moodle php -r '
 define("CLI_SCRIPT", true);
@@ -60,4 +77,3 @@ require "/var/www/html/config.php";
 exit($DB->record_exists("config_plugins", ["plugin" => "local_aicodehelper"]) ? 0 : 1);
 '
 echo "local_aicodehelper plugin: OK"
-
