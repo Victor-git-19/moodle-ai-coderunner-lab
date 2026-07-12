@@ -22,7 +22,7 @@ smoke:
 	./scripts/smoke-test.sh
 
 test:
-	docker compose run --rm --no-deps ai-service pytest -q
+	docker compose run --rm --no-deps -e PYTHONPATH=/app ai-service pytest -q
 
 reset:
 	@if [ "$(CONFIRM)" != "yes" ]; then \
@@ -30,4 +30,3 @@ reset:
 		exit 1; \
 	fi
 	docker compose down -v
-

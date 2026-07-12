@@ -6,7 +6,7 @@ MOODLE_DATA=/var/www/moodledata
 CONFIG_FILE="$MOODLE_DIR/config.php"
 
 required_variables=(
-    DB_NAME DB_USER DB_PASSWORD MOODLE_URL MOODLE_SITE_NAME
+    DB_NAME DB_USER DB_PASSWORD MOODLE_URL MOODLE_SITE_NAME AI_SERVICE_URL
     MOODLE_ADMIN_USER MOODLE_ADMIN_PASSWORD MOODLE_ADMIN_EMAIL
 )
 
@@ -77,7 +77,10 @@ echo "Applying Moodle and plugin upgrades..."
 runuser -u www-data -- php "$MOODLE_DIR/admin/cli/upgrade.php" --non-interactive
 runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" \
     --component=qtype_coderunner --name=jobe_host --set=jobe
+runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" \
+    --component=local_aicodehelper --name=endpoint --set="$AI_SERVICE_URL"
+runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" \
+    --component=local_aicodehelper --name=timeout --set="${AI_TIMEOUT:-60}"
 runuser -u www-data -- php "$MOODLE_DIR/admin/cli/purge_caches.php"
 
 exec "$@"
-

@@ -31,8 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (trim($code) === '') {
         $error = get_string('emptycode', 'local_aicodehelper');
     } else {
-        $endpoint = getenv('AI_SERVICE_URL') ?: 'http://ai-service:8000/api/v1/analyze';
-        $timeout = max(1, (int) (getenv('AI_TIMEOUT') ?: 60));
+        $endpoint = get_config('local_aicodehelper', 'endpoint') ?: 'http://ai-service:8000/api/v1/analyze';
+        $timeout = max(1, (int) (get_config('local_aicodehelper', 'timeout') ?: 60));
         $payload = json_encode([
             'language' => $language,
             'task' => $task,
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
 
         try {
-            // The endpoint is fixed by the server environment, not supplied by the browser.
+            // The endpoint is configured by a site administrator, not supplied by the browser.
             $curl = new curl(['ignoresecurity' => true]);
             $curl->setHeader(['Content-Type: application/json', 'Accept: application/json']);
             $response = $curl->post($endpoint, $payload, ['CURLOPT_TIMEOUT' => $timeout]);
@@ -125,4 +125,3 @@ if ($result !== null) {
 }
 
 echo $OUTPUT->footer();
-

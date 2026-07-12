@@ -21,4 +21,7 @@ $string['emptycode'] = 'Enter code to analyze.';
 $string['serviceerror'] = 'The AI service is temporarily unavailable. Try again later.';
 $string['invalidresponse'] = 'The AI service returned an invalid response.';
 $string['fallback'] = 'Ollama was unavailable, so this result contains static analysis only.';
-
+$string['endpoint'] = 'AI service endpoint';
+$string['endpoint_desc'] = 'Server-side URL of the analyze endpoint. The browser never connects to this address.';
+$string['timeout'] = 'Request timeout';
+$string['timeout_desc'] = 'Maximum time to wait for the AI service, in seconds.';
