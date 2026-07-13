@@ -39,5 +39,8 @@ function xmldb_local_aicodehelper_upgrade(int $oldversion): bool {
         }
         upgrade_plugin_savepoint(true, 2026071301, 'local', 'aicodehelper');
     }
+    if ($oldversion < 2026071302) {
+        upgrade_plugin_savepoint(true, 2026071302, 'local', 'aicodehelper');
+    }
     return true;
 }

@@ -3,8 +3,8 @@
 
 $string['pluginname'] = 'AI code helper';
 $string['aicodehelper:analyzeattempt'] = 'Analyze CodeRunner attempts with AI';
-$string['pageheading'] = 'Code analysis';
-$string['intro'] = 'Paste educational code. The service performs safe static analysis and asks the local model for an explanation. Code is not executed here.';
+$string['pageheading'] = 'AI service diagnostics';
+$string['intro'] = 'Use this form to test AI service without a CodeRunner attempt. The normal student workflow is the AI button shown after CodeRunner checks an answer. Code is not executed here.';
 $string['language'] = 'Language';
 $string['language_python'] = 'Python';
 $string['language_javascript'] = 'JavaScript';
@@ -14,6 +14,7 @@ $string['code'] = 'Code';
 $string['analyze'] = 'Analyze';
 $string['analyzesolution'] = 'Analyze solution with AI';
 $string['loading'] = 'Analyzing…';
+$string['showanalysisagain'] = 'Show analysis again';
 $string['none'] = 'No comments';
 $string['emptycode'] = 'Enter code to analyze.';
 $string['serviceerror'] = 'The AI service is temporarily unavailable. Try again later.';

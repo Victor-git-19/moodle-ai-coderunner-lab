@@ -35,6 +35,7 @@ final class hook_callbacks {
             'strings' => [
                 'button' => get_string('analyzesolution', 'local_aicodehelper'),
                 'loading' => get_string('loading', 'local_aicodehelper'),
+                'showAgain' => get_string('showanalysisagain', 'local_aicodehelper'),
                 'error' => get_string('requesterror', 'local_aicodehelper'),
             ],
         ];

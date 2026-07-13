@@ -42,7 +42,8 @@
                 return;
             }
             button.disabled = true;
-            status.textContent = config.strings.loading;
+            button.textContent = config.strings.loading;
+            status.textContent = '';
             var body = new URLSearchParams({
                 attemptid: String(config.attemptId),
                 slot: String(slot),
@@ -63,8 +64,11 @@
             }).then(function(data) {
                 status.textContent = '';
                 result.innerHTML = data.html;
+                button.textContent = config.strings.showAgain;
+                button.disabled = false;
             }).catch(function(error) {
                 status.textContent = error.message || config.strings.error;
+                button.textContent = config.strings.button;
                 button.disabled = false;
             });
         });

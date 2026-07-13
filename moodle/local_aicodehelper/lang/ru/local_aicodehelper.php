@@ -3,8 +3,8 @@
 
 $string['pluginname'] = 'ИИ-помощник по коду';
 $string['aicodehelper:analyzeattempt'] = 'Анализировать попытки CodeRunner с помощью ИИ';
-$string['pageheading'] = 'Анализ кода';
-$string['intro'] = 'Вставьте учебный код. Сервис выполнит безопасный статический анализ и запросит объяснение у локальной модели. Код здесь не запускается.';
+$string['pageheading'] = 'Диагностика AI service';
+$string['intro'] = 'Эта форма нужна для проверки AI service без попытки CodeRunner. Обычный сценарий студента — кнопка ИИ после проверки ответа CodeRunner. Код здесь не запускается.';
 $string['language'] = 'Язык';
 $string['language_python'] = 'Python';
 $string['language_javascript'] = 'JavaScript';
@@ -14,6 +14,7 @@ $string['code'] = 'Код';
 $string['analyze'] = 'Анализировать';
 $string['analyzesolution'] = 'Проанализировать решение с помощью ИИ';
 $string['loading'] = 'Анализируем…';
+$string['showanalysisagain'] = 'Показать анализ снова';
 $string['none'] = 'Нет замечаний';
 $string['emptycode'] = 'Введите код для анализа.';
 $string['serviceerror'] = 'ИИ-сервис временно недоступен. Попробуйте позже.';

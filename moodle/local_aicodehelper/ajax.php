@@ -40,7 +40,6 @@ try {
         echo json_encode([
             'success' => true,
             'cached' => true,
-            'analysis' => $analysis,
             'html' => \local_aicodehelper\output_renderer::render($analysis),
         ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         exit;
@@ -62,18 +61,19 @@ try {
         'responsejson' => json_encode($analysis, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
         'timecreated' => time(),
     ]);
+    $iscached = false;
     try {
         $DB->insert_record('local_aicodehelper_analysis', $record);
-    } catch (dml_write_exception $exception) {
+    } catch (dml_write_exception) {
         // A parallel request may have inserted the same step. Return that cached result.
         $cached = $DB->get_record('local_aicodehelper_analysis', $conditions, '*', MUST_EXIST);
         $analysis = json_decode($cached->responsejson, true, 30, JSON_THROW_ON_ERROR);
+        $iscached = true;
     }
 
     echo json_encode([
         'success' => true,
-        'cached' => false,
-        'analysis' => $analysis,
+        'cached' => $iscached,
         'html' => \local_aicodehelper\output_renderer::render($analysis),
     ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 } catch (Throwable $exception) {

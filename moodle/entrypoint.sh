@@ -73,7 +73,7 @@ if ! php -r '
         "--adminemail=$MOODLE_ADMIN_EMAIL"
 fi
 
-echo "Applying Moodle and plugin upgrades..."
+echo "Upgrading Moodle and plugins..."
 runuser -u www-data -- php "$MOODLE_DIR/admin/cli/upgrade.php" --non-interactive
 runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" \
     --component=qtype_coderunner --name=jobe_host --set=jobe
@@ -83,4 +83,5 @@ runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" \
     --component=local_aicodehelper --name=timeout --set="${AI_TIMEOUT:-60}"
 runuser -u www-data -- php "$MOODLE_DIR/admin/cli/purge_caches.php"
 
+echo "Moodle is ready."
 exec "$@"

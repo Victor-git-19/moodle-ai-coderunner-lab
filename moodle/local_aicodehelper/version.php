@@ -4,7 +4,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicodehelper';
-$plugin->version = 2026071301;
+$plugin->version = 2026071302;
 $plugin->requires = 2026042001;
 $plugin->maturity = MATURITY_STABLE;
-$plugin->release = '2.0.0';
+$plugin->release = '2.0.1';
