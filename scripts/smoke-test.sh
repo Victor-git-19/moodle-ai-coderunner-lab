@@ -110,8 +110,16 @@ assert "fallback_used" in result, result
 ' >/dev/null
 echo "Structured teacher analysis: OK"
 
-docker compose exec -T -e PYTHONPATH=/app ai-service pytest -q \
-    tests/test_api.py::test_successful_attempt_uses_coderunner_result >/dev/null
+docker compose run --rm --no-deps \
+    -e OLLAMA_URL=http://127.0.0.1:1 \
+    -e AI_TIMEOUT=0.2 \
+    ai-service python -c '
+import asyncio
+from app.main import analyze
+from app.schemas import AnalyzeRequest
+result = asyncio.run(analyze(AnalyzeRequest(code="print(1)")))
+assert result.fallback_used is True
+' >/dev/null
 echo "AI fallback: OK"
 
 docker compose exec -T moodle test -f /var/www/html/public/question/type/coderunner/version.php
