@@ -61,6 +61,7 @@ Entrypoint видит существующую базу, выполняет то
 - порт Jobe в «Безопасность → Безопасность HTTP», если используется не 80 или 443;
 - сетевой доступ от PHP-сервера Moodle к Jobe и AI service;
 - полный URL `/api/v1/analyze` и таймаут в настройках `local_aicodehelper`.
+- режим подсказок, лимит анализов и право `local/aicodehelper:analyzeattempt` для нужных ролей.
 
 В лабораторном Compose Jobe называется `jobe`, а AI service — `ai-service`. На вузовском сервере укажите реальные DNS-имена, доступные именно с сервера Moodle. Не открывайте Jobe и Ollama в интернет.
 
@@ -85,8 +86,13 @@ sudo -u www-data php /var/www/moodle/admin/cli/cfg.php \
 Весь разработанный Moodle-плагин находится только в `moodle/local_aicodehelper`:
 
 - `version.php` — версия и требование Moodle 5.2.1;
-- `index.php` — форма, серверный запрос и безопасный вывод;
-- `settings.php` — адрес AI service и таймаут;
+- `index.php` — отдельная ручная форма анализа;
+- `ajax.php` — защищённый серверный запрос анализа попытки;
+- `integration.js` — кнопка и индикатор загрузки на странице CodeRunner;
+- `classes/` — hook Moodle, безопасная сборка данных попытки, клиент AI service и экранирование ответа;
+- `db/` — capability, регистрация hook, таблица кэша и upgrade;
+- `tests/` — тесты безопасности и интеграции;
+- `settings.php` — включение интеграции, режим подсказок, лимиты, адрес и timeout;
 - `lib.php` — ссылка в навигации;
 - `lang/en/local_aicodehelper.php` и `lang/ru/local_aicodehelper.php` — строки интерфейса.
 
@@ -102,7 +108,7 @@ sudo -u www-data php /var/www/moodle/admin/cli/upgrade.php --non-interactive
 sudo -u www-data php /var/www/moodle/admin/cli/purge_caches.php
 ```
 
-Затем откройте «Администрирование сайта → Плагины → Локальные плагины → ИИ-помощник по коду» и задайте адрес AI service. То же через CLI:
+Затем откройте «Администрирование сайта → Плагины → Локальные плагины → ИИ-помощник по коду», задайте адрес AI service и проверьте режим подсказок. Полный исправленный код оставьте запрещённым, если он не нужен по методике курса. Адрес и timeout можно задать через CLI:
 
 ```bash
 sudo -u www-data php /var/www/moodle/admin/cli/cfg.php \
@@ -112,4 +118,4 @@ sudo -u www-data php /var/www/moodle/admin/cli/cfg.php \
   --component=local_aicodehelper --name=timeout --set=60
 ```
 
-Проверьте страницу `/local/aicodehelper/index.php` под обычной авторизованной учётной записью.
+Проверьте страницу `/local/aicodehelper/index.php` под обычной авторизованной учётной записью. Затем откройте попытку CodeRunner, отправьте неверный ответ и убедитесь, что после проверки появилась кнопка ИИ-анализа. Студенту или другой роли потребуется capability `local/aicodehelper:analyzeattempt`.

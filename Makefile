@@ -23,6 +23,7 @@ smoke:
 
 test:
 	docker compose run --rm --no-deps -e PYTHONPATH=/app ai-service pytest -q
+	docker compose exec -T moodle php /var/www/html/public/local/aicodehelper/tests/cli_test.php
 
 reset:
 	@if [ "$(CONFIRM)" != "yes" ]; then \
