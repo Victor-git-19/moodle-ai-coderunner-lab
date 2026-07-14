@@ -42,7 +42,7 @@ async def analyze_with_ollama(request: AnalyzeRequest, static_data: dict[str, An
         "prompt": build_prompt(request, static_data),
         "format": "json",
         "stream": False,
-        "options": {"temperature": 0.1, "num_predict": 700},
+        "options": {"temperature": 0.1, "num_predict": 1000},
     }
     async with httpx.AsyncClient(timeout=httpx.Timeout(OLLAMA_TIMEOUT)) as client:
         response = await client.post(f"{OLLAMA_URL}/api/generate", json=payload)

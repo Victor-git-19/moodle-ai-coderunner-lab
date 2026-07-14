@@ -115,6 +115,43 @@ def test_model_result_keeps_coderunner_context() -> None:
     assert enriched["hardcode_warnings"]
 
 
+def test_malformed_model_fields_are_safely_normalized() -> None:
+    static = analyze_code(AnalyzeRequest(
+        code="print(4)", status="incorrect", passed_tests=1, failed_tests=2,
+    ))
+    model = {
+        "verdict": "В решении есть полезная идея, но тесты пройдены не все.",
+        "strengths": "not a list",
+        "issues": [
+            {
+                "severity": "critical",
+                "title": "Проверьте условие",
+                "explanation": "Одна из веток может обрабатывать вход неверно.",
+                "hint": "Разберите вручную непройденный случай.",
+                "line": "4",
+            },
+            {"severity": "error"},
+        ],
+        "failed_test_analysis": [1, "Стоит сопоставить ветвления с результатами тестов."],
+        "edge_cases": None,
+        "complexity": {"time": ["bad"], "memory": "O(1)"},
+        "style": [{"text": "bad"}],
+        "hardcode_warnings": [],
+        "next_step": {"text": "bad"},
+    }
+
+    result = merge_model_response(model, static).model_dump()
+
+    assert result["fallback_used"] is False
+    assert result["strengths"] == static["strengths"]
+    assert result["issues"][0]["severity"] == "warning"
+    assert result["issues"][0]["line"] is None
+    assert result["failed_test_analysis"] == ["Стоит сопоставить ветвления с результатами тестов."]
+    assert result["complexity"]["time"] == static["complexity"]["time"]
+    assert result["complexity"]["memory"] == "O(1)"
+    assert result["next_step"] == static["next_step"]
+
+
 def test_model_html_is_data_not_markup(monkeypatch) -> None:
     async def succeed(*_args, **_kwargs):
         return AnalyzeResponse(

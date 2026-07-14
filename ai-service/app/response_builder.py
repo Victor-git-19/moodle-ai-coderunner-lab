@@ -3,6 +3,62 @@ from typing import Any
 from .schemas import AnalyzeResponse
 
 
+def _text(value: object, fallback: str) -> str:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return fallback
+
+
+def _string_list(value: object, fallback: list[str]) -> list[str]:
+    if not isinstance(value, list):
+        return fallback
+    items = [item.strip() for item in value if isinstance(item, str) and item.strip()]
+    return items or fallback
+
+
+def _issues(value: object, fallback: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return fallback
+
+    issues = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        title = item.get("title")
+        explanation = item.get("explanation")
+        hint = item.get("hint")
+        if not all(isinstance(field, str) and field.strip() for field in (title, explanation, hint)):
+            continue
+
+        severity = item.get("severity")
+        if severity not in {"error", "warning", "info"}:
+            severity = "warning"
+        line = item.get("line")
+        if isinstance(line, bool) or not isinstance(line, int) or line < 1:
+            line = None
+
+        issues.append(
+            {
+                "severity": severity,
+                "title": title.strip(),
+                "explanation": explanation.strip(),
+                "hint": hint.strip(),
+                "line": line,
+            }
+        )
+    return issues or fallback
+
+
+def _complexity(value: object, fallback: dict[str, str]) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return fallback
+    return {
+        "time": _text(value.get("time"), fallback["time"]),
+        "memory": _text(value.get("memory"), fallback["memory"]),
+        "comment": _text(value.get("comment"), fallback["comment"]),
+    }
+
+
 def response_data(
     *,
     verdict: str,
@@ -34,19 +90,21 @@ def response_data(
 
 
 def merge_model_response(model_data: dict[str, Any], static_data: dict[str, Any]) -> AnalyzeResponse:
-    result = dict(model_data)
-    for field in (
-        "strengths",
-        "issues",
-        "failed_test_analysis",
-        "edge_cases",
-        "complexity",
-        "style",
-        "hardcode_warnings",
-        "next_step",
-    ):
-        if not result.get(field):
-            result[field] = static_data[field]
+    result = {
+        "verdict": _text(model_data.get("verdict"), static_data["verdict"]),
+        "strengths": _string_list(model_data.get("strengths"), static_data["strengths"]),
+        "issues": _issues(model_data.get("issues"), static_data["issues"]),
+        "failed_test_analysis": _string_list(
+            model_data.get("failed_test_analysis"), static_data["failed_test_analysis"]
+        ),
+        "edge_cases": _string_list(model_data.get("edge_cases"), static_data["edge_cases"]),
+        "complexity": _complexity(model_data.get("complexity"), static_data["complexity"]),
+        "style": _string_list(model_data.get("style"), static_data["style"]),
+        "hardcode_warnings": _string_list(
+            model_data.get("hardcode_warnings"), static_data["hardcode_warnings"]
+        ),
+        "next_step": _text(model_data.get("next_step"), static_data["next_step"]),
+    }
     if len(str(result.get("verdict", "")).strip()) < 12:
         result["verdict"] = static_data["verdict"]
     result["fallback_used"] = False

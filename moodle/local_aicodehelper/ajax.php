@@ -35,14 +35,19 @@ try {
         'stepid' => $stepid,
     ];
     $cached = $DB->get_record('local_aicodehelper_analysis', $conditions);
+    $cachedfallback = null;
     if ($cached) {
         $analysis = json_decode($cached->responsejson, true, 30, JSON_THROW_ON_ERROR);
-        echo json_encode([
-            'success' => true,
-            'cached' => true,
-            'html' => \local_aicodehelper\output_renderer::render($analysis),
-        ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-        exit;
+        if (empty($analysis['fallback_used'])) {
+            echo json_encode([
+                'success' => true,
+                'cached' => true,
+                'html' => \local_aicodehelper\output_renderer::render($analysis),
+            ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+            exit;
+        }
+        // A temporary Ollama failure must not permanently pin this step to static fallback.
+        $cachedfallback = $cached;
     }
 
     $maximum = max(1, (int) (get_config('local_aicodehelper', 'maxanalyses') ?: 3));
@@ -51,12 +56,39 @@ try {
         'attemptid' => $attemptid,
         'slot' => $slot,
     ]);
+    if ($cachedfallback) {
+        $used--;
+    }
     if ($used >= $maximum) {
         throw new moodle_exception('limitreached', 'local_aicodehelper', '', $maximum);
     }
 
     $payload = \local_aicodehelper\payload_builder::from_attempt($attempt, $slot);
     $analysis = \local_aicodehelper\service_client::analyze($payload);
+    if (!empty($analysis['fallback_used'])) {
+        echo json_encode([
+            'success' => true,
+            'cached' => false,
+            'html' => \local_aicodehelper\output_renderer::render($analysis),
+        ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        exit;
+    }
+
+    if ($cachedfallback) {
+        $cachedfallback->responsejson = json_encode(
+            $analysis,
+            JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
+        );
+        $cachedfallback->timecreated = time();
+        $DB->update_record('local_aicodehelper_analysis', $cachedfallback);
+        echo json_encode([
+            'success' => true,
+            'cached' => false,
+            'html' => \local_aicodehelper\output_renderer::render($analysis),
+        ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        exit;
+    }
+
     $record = (object) ($conditions + [
         'responsejson' => json_encode($analysis, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
         'timecreated' => time(),
