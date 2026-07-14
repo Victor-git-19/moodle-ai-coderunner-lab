@@ -5,6 +5,7 @@ namespace local_aicodehelper;
 
 defined('MOODLE_INTERNAL') || die();
 
+/** Проверяет экранирование недоверенного текста модели. */
 final class output_renderer_test extends \basic_testcase {
     public function test_model_html_is_escaped(): void {
         $html = output_renderer::render([

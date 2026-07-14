@@ -5,9 +5,17 @@ namespace local_aicodehelper;
 
 defined('MOODLE_INTERNAL') || die();
 
+/** Собирает из попытки CodeRunner только разрешённые студенту данные. */
 final class payload_builder {
     private const MAX_FIELD_LENGTH = 10000;
 
+    /**
+     * Построить запрос к AI service по текущему шагу попытки.
+     *
+     * @param \mod_quiz\quiz_attempt $attempt Попытка теста Moodle.
+     * @param int $slot Номер вопроса внутри попытки.
+     * @return array Безопасный payload для AI service.
+     */
     public static function from_attempt(\mod_quiz\quiz_attempt $attempt, int $slot): array {
         $qa = $attempt->get_question_attempt($slot);
         $question = $qa->get_question();
@@ -50,7 +58,17 @@ final class payload_builder {
         ];
     }
 
+    /**
+     * Удалить из результатов закрытые входы, ответы и test code.
+     *
+     * Публичный метод отдельно тестируется, потому что это главная граница безопасности плагина.
+     *
+     * @param array $testresults Сырые результаты CodeRunner.
+     * @param array $resultcolumns Колонки, показанные студенту настройками вопроса.
+     * @return array Результаты, которые можно передать AI service.
+     */
     public static function sanitize_test_results(array $testresults, array $resultcolumns): array {
+        // Сначала определяем, какие колонки CodeRunner разрешил видеть студенту.
         $allowedfields = [];
         foreach ($resultcolumns as $column) {
             if (!is_array($column)) {
@@ -90,7 +108,7 @@ final class payload_builder {
                 }
             }
             if (!$item['visible_output']) {
-                // Keep the JSON contract stable: an empty map must be {}, not [].
+                // По контракту API пустой visible_output должен быть объектом {}, а не списком [].
                 $item['visible_output'] = new \stdClass();
             }
             $safe[] = $item;
@@ -101,15 +119,28 @@ final class payload_builder {
         return $safe;
     }
 
+    /**
+     * Проверить, что тест явно помечен CodeRunner как открытый.
+     *
+     * @param object $result Результат теста CodeRunner.
+     * @return bool true только для полностью открытого теста.
+     */
     private static function is_visible(object $result): bool {
         if (!isset($result->display)) {
             return true;
         }
-        // Conditional CodeRunner display modes still describe a hidden test. Even if Moodle currently
-        // shows more details, the AI receives only the safe summary unless the test is explicitly SHOW.
+        // Условные режимы показа всё равно считаются закрытыми. Полные данные уходят в AI
+        // только тогда, когда преподаватель явно выбрал режим SHOW.
         return $result->display === 'SHOW';
     }
 
+    /**
+     * Выделить доступные сообщения компилятора и выполнения.
+     *
+     * @param object $outcome Общий результат CodeRunner.
+     * @param array $tests Уже очищенные результаты тестов.
+     * @return array Сообщения и признаки лимитов.
+     */
     private static function collect_messages(object $outcome, array $tests): array {
         $error = self::plain_text((string) ($outcome->errormessage ?? ''));
         $alloutput = [];
@@ -140,6 +171,7 @@ final class payload_builder {
         ];
     }
 
+    /** Определить язык ответа из шага или настроек вопроса. */
     private static function language(\question_attempt $qa, object $question): string {
         $language = (string) $qa->get_last_qt_var('language', '');
         if ($language === '') {
@@ -148,6 +180,7 @@ final class payload_builder {
         return self::limit($language, 30);
     }
 
+    /** Свести результат CodeRunner к короткому общему статусу. */
     private static function status(object $outcome, int $failed, array $messages): string {
         if ((int) ($outcome->status ?? 0) === 2) {
             return 'syntax_error';
@@ -164,6 +197,7 @@ final class payload_builder {
         return $failed > 0 ? 'incorrect' : 'correct';
     }
 
+    /** Определить безопасный тип ошибки без деталей закрытого теста. */
     private static function error_type(string $output, bool $passed): string {
         if ($passed) {
             return '';
@@ -181,6 +215,7 @@ final class payload_builder {
         return 'wrong answer';
     }
 
+    /** Сформировать сообщение для открытого теста. */
     private static function visible_message(object $result, string $error): string {
         if (!empty($result->iscorrect)) {
             return 'Passed';
@@ -191,6 +226,7 @@ final class payload_builder {
         return 'Failed';
     }
 
+    /** Сформировать краткое сообщение для закрытого теста без его данных. */
     private static function hidden_message(bool $passed, string $error): string {
         if ($passed) {
             return 'Hidden test passed';
@@ -198,10 +234,12 @@ final class payload_builder {
         return 'Hidden test failed: ' . ($error ?: 'wrong answer');
     }
 
+    /** Удалить HTML и ограничить длину текста. */
     private static function plain_text(string $value): string {
         return self::limit(trim(html_to_text($value, 0, false)));
     }
 
+    /** Обрезать поле до безопасной длины. */
     private static function limit(string $value, int $length = self::MAX_FIELD_LENGTH): string {
         return mb_substr($value, 0, $length);
     }

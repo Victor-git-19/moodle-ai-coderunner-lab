@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN useradd --create-home --uid 10001 appuser
 
+# Отдельный этап тестов не попадает в рабочий образ.
 FROM base AS test
 
 COPY ai-service/requirements-test.txt .
@@ -23,6 +24,7 @@ CMD ["pytest", "-q", "-p", "no:cacheprovider"]
 
 FROM base AS production
 
+# Рабочий образ содержит только приложение и его основные зависимости.
 COPY ai-service/app ./app
 
 USER appuser

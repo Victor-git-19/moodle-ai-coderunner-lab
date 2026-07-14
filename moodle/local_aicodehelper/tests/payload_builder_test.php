@@ -5,6 +5,7 @@ namespace local_aicodehelper;
 
 defined('MOODLE_INTERNAL') || die();
 
+/** Проверяет, что payload не раскрывает закрытые тесты CodeRunner. */
 final class payload_builder_test extends \basic_testcase {
     public function test_hidden_test_data_is_never_in_payload(): void {
         $visible = (object) [

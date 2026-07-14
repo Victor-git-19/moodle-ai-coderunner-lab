@@ -1,15 +1,21 @@
+"""Нормализация ответа модели и построение статического fallback."""
+
 from typing import Any
 
 from .schemas import AnalyzeResponse
 
 
 def _text(value: object, fallback: str) -> str:
+    """Вернуть непустую строку модели или безопасное значение анализа."""
+
     if isinstance(value, str) and value.strip():
         return value.strip()
     return fallback
 
 
 def _string_list(value: object, fallback: list[str]) -> list[str]:
+    """Оставить в списке модели только непустые строки."""
+
     if not isinstance(value, list):
         return fallback
     items = [item.strip() for item in value if isinstance(item, str) and item.strip()]
@@ -17,6 +23,8 @@ def _string_list(value: object, fallback: list[str]) -> list[str]:
 
 
 def _issues(value: object, fallback: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Проверить структуру проблем и отбросить повреждённые элементы."""
+
     if not isinstance(value, list):
         return fallback
 
@@ -50,6 +58,8 @@ def _issues(value: object, fallback: list[dict[str, Any]]) -> list[dict[str, Any
 
 
 def _complexity(value: object, fallback: dict[str, str]) -> dict[str, str]:
+    """Проверить три поля оценки сложности по отдельности."""
+
     if not isinstance(value, dict):
         return fallback
     return {
@@ -71,7 +81,8 @@ def response_data(
     style: list[str] | None = None,
     hardcode_warnings: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Build the one response shape used by static analysis and fallback."""
+    """Собрать единую структуру ответа для анализа и fallback."""
+
     return {
         "verdict": verdict,
         "strengths": strengths,
@@ -90,6 +101,8 @@ def response_data(
 
 
 def merge_model_response(model_data: dict[str, Any], static_data: dict[str, Any]) -> AnalyzeResponse:
+    """Дополнить неполный ответ модели надёжными статическими данными."""
+
     result = {
         "verdict": _text(model_data.get("verdict"), static_data["verdict"]),
         "strengths": _string_list(model_data.get("strengths"), static_data["strengths"]),
@@ -112,4 +125,6 @@ def merge_model_response(model_data: dict[str, Any], static_data: dict[str, Any]
 
 
 def fallback_response(static_data: dict[str, Any]) -> AnalyzeResponse:
+    """Вернуть статический анализ, если Ollama недоступна."""
+
     return AnalyzeResponse.model_validate({**static_data, "fallback_used": True})

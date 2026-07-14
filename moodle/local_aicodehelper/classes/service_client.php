@@ -5,7 +5,14 @@ namespace local_aicodehelper;
 
 defined('MOODLE_INTERNAL') || die();
 
+/** Серверный HTTP-клиент для обращения Moodle к AI service. */
 final class service_client {
+    /**
+     * Отправить безопасный payload и вернуть проверенный JSON.
+     *
+     * @param array $payload Данные попытки без секретных тестов.
+     * @return array Структурированный преподавательский анализ.
+     */
     public static function analyze(array $payload): array {
         global $CFG;
         require_once($CFG->libdir . '/filelib.php');
@@ -13,6 +20,7 @@ final class service_client {
         $endpoint = get_config('local_aicodehelper', 'endpoint') ?: 'http://ai-service:8000/api/v1/analyze';
         $timeout = max(1, min(300, (int) (get_config('local_aicodehelper', 'timeout') ?: 60)));
         $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR);
+        // Используется штатный curl Moodle; браузер внутренний endpoint не видит.
         $curl = new \curl(['ignoresecurity' => true]);
         $curl->setHeader(['Content-Type: application/json', 'Accept: application/json']);
         $response = $curl->post($endpoint, $body, ['CURLOPT_TIMEOUT' => $timeout]);
@@ -25,6 +33,11 @@ final class service_client {
         return $decoded;
     }
 
+    /**
+     * Проверить наличие всех полей, которые ожидает Moodle-рендерер.
+     *
+     * @param mixed $result Декодированный ответ сервиса.
+     */
     private static function validate(mixed $result): void {
         $fields = [
             'verdict', 'strengths', 'issues', 'failed_test_analysis', 'edge_cases',

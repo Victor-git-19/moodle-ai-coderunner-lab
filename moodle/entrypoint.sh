@@ -5,6 +5,7 @@ MOODLE_DIR=/var/www/html
 MOODLE_DATA=/var/www/moodledata
 CONFIG_FILE="$MOODLE_DIR/config.php"
 
+# Без этих значений автоматическая установка была бы неполной.
 required_variables=(
     DB_NAME DB_USER DB_PASSWORD MOODLE_URL MOODLE_SITE_NAME AI_SERVICE_URL
     MOODLE_ADMIN_USER MOODLE_ADMIN_PASSWORD MOODLE_ADMIN_EMAIL
@@ -29,6 +30,7 @@ done
 mkdir -p "$MOODLE_DATA"
 chown -R www-data:www-data "$MOODLE_DATA"
 
+# config.php создаётся один раз и затем сохраняется в volume moodledata.
 if [[ ! -f "$CONFIG_FILE" ]]; then
     cat > "$CONFIG_FILE" <<'PHP'
 <?php
@@ -58,6 +60,7 @@ PHP
     chmod 640 "$CONFIG_FILE"
 fi
 
+# Наличие таблицы mdl_config отличает новый стенд от уже установленного.
 if ! php -r '
     mysqli_report(MYSQLI_REPORT_OFF);
     $db = @new mysqli("db", getenv("DB_USER"), getenv("DB_PASSWORD"), getenv("DB_NAME"));
@@ -85,6 +88,7 @@ runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" \
     --component=local_aicodehelper --name=timeout --set="${AI_TIMEOUT:-60}"
 
 echo "Checking the demo Python course..."
+# Установщик сам проверяет shortname и не создаёт второй экземпляр курса.
 runuser -u www-data -- env MOODLE_CONFIG="$CONFIG_FILE" \
     php /opt/python-course/install.php
 

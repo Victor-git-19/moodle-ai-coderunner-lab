@@ -1,3 +1,5 @@
+"""HTTP API: проверка входных данных, статический анализ и обращение к Ollama."""
+
 import json
 import logging
 import os
@@ -23,11 +25,15 @@ app = FastAPI(title="Moodle AI Code Helper", version="2.0.0")
 
 @app.get("/health")
 async def health() -> dict[str, str]:
+    """Вернуть состояние сервиса и имя выбранной модели."""
+
     return {"status": "ok", "model": OLLAMA_MODEL}
 
 
 @app.post("/api/v1/analyze", response_model=AnalyzeResponse)
 async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
+    """Проанализировать код, не выполняя его внутри AI service."""
+
     code_size = len(request.code.encode("utf-8"))
     if not request.code.strip():
         raise HTTPException(status_code=400, detail="Code must not be empty")
@@ -46,6 +52,6 @@ async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     try:
         return await analyze_with_ollama(request, static_data)
     except (httpx.HTTPError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
-        # A model failure must not prevent the student from receiving safe static feedback.
+        # Сбой модели не должен лишать студента безопасного статического разбора.
         logger.warning("Ollama unavailable or returned invalid data: %s", type(error).__name__)
         return fallback_response(static_data)

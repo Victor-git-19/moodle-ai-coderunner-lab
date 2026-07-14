@@ -5,6 +5,7 @@ require_once(__DIR__ . '/../../config.php');
 
 require_login();
 
+// Отдельная ручная форма оставлена как простой способ проверить AI service без теста.
 $context = context_system::instance();
 $pageurl = new moodle_url('/local/aicodehelper/index.php');
 $PAGE->set_context($context);
@@ -25,6 +26,7 @@ if (!in_array($language, $allowedlanguages, true)) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Moodle проверяет sesskey до отправки пользовательского кода во внутренний сервис.
     require_sesskey();
     if (trim($code) === '') {
         $error = get_string('emptycode', 'local_aicodehelper');
@@ -51,6 +53,7 @@ if ($error !== null) {
     echo $OUTPUT->notification(s($error), 'error');
 }
 
+// Все введённые и полученные значения проходят через s() или output_renderer.
 echo html_writer::start_tag('form', ['method' => 'post', 'action' => $pageurl->out(false)]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 echo html_writer::tag('label', s(get_string('language', 'local_aicodehelper')), ['for' => 'id_language']);

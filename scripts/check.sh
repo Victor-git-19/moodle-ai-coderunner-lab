@@ -9,6 +9,7 @@ if [[ ! -f .env ]]; then
     exit 1
 fi
 
+# Прочитать значение без выполнения содержимого .env как shell-кода.
 env_value() {
     awk -F= -v key="$1" '$1 == key {sub(/^[^=]*=/, ""); print; exit}' .env
 }
@@ -17,6 +18,7 @@ MOODLE_URL="$(env_value MOODLE_URL)"
 OLLAMA_MODEL="$(env_value OLLAMA_MODEL)"
 failures=0
 
+# Выполнить одну проверку и напечатать одинаковый понятный результат.
 report() {
     local label="$1"
     shift
@@ -28,6 +30,7 @@ report() {
     fi
 }
 
+# Сервис подходит, если контейнер запущен и его healthcheck не сообщает об ошибке.
 healthy_container() {
     local service="$1"
     local id status
@@ -37,10 +40,12 @@ healthy_container() {
     [[ "$status" == "healthy" || "$status" == "running" ]]
 }
 
+# Moodle проверяется снаружи так же, как его открывает пользователь.
 check_moodle() {
     healthy_container moodle && curl -fsSL --max-time 15 "${MOODLE_URL%/}/login/index.php"
 }
 
+# Внутренние сервисы проверяются из Docker-сети и не требуют внешних портов.
 check_jobe() {
     healthy_container jobe && docker compose exec -T jobe python3 -c \
         "import urllib.request; urllib.request.urlopen('http://localhost/jobe/index.php/restapi/languages', timeout=5)"
@@ -62,4 +67,3 @@ report "AI service" check_ai
 report "Ollama" check_ollama
 
 exit "$failures"
-

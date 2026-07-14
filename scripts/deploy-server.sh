@@ -4,11 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# Завершить развёртывание с коротким понятным сообщением.
 fail() {
     echo "Error: $*" >&2
     exit 1
 }
 
+# Читаем .env как данные, а не выполняем его через source.
 env_value() {
     awk -F= -v key="$1" '$1 == key {sub(/^[^=]*=/, ""); print; exit}' .env
 }
@@ -21,6 +23,7 @@ if [[ ! -f .env ]]; then
     ./scripts/create-env.sh
 fi
 
+# До запуска проверяем порт и минимальные ресурсы слабого учебного сервера.
 MOODLE_PORT="$(env_value MOODLE_PORT)"
 MOODLE_URL="$(env_value MOODLE_URL)"
 [[ "$MOODLE_PORT" =~ ^[0-9]+$ ]] || fail "MOODLE_PORT must be a number."
@@ -44,6 +47,7 @@ fi
 echo "Building and starting services..."
 docker compose up -d --build
 
+# Модель загружается только при первом запуске, поэтому ожидание может занять время.
 ready=false
 for attempt in {1..80}; do
     if ./scripts/check.sh; then

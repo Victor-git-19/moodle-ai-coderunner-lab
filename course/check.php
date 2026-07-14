@@ -1,6 +1,6 @@
 #!/usr/bin/env php
 <?php
-// Checks the installed course structure and optionally runs every reference answer through Jobe.
+// Проверяет структуру курса и при необходимости запускает эталонные ответы через Jobe.
 
 define('CLI_SCRIPT', true);
 
@@ -15,6 +15,7 @@ require_once $CFG->libdir . '/questionlib.php';
 
 $content = require __DIR__ . '/content.php';
 $course = $DB->get_record('course', ['shortname' => $content['shortname']], '*', MUST_EXIST);
+// Словарь по названию позволяет сравнить файл курса с вопросами в Moodle.
 $expectedtasks = [];
 foreach ($content['sections'] as $section) {
     foreach ($section['tasks'] as $task) {
@@ -22,6 +23,7 @@ foreach ($content['sections'] as $section) {
     }
 }
 
+// Берём только последнюю версию каждого вопроса из скрытого банка курса.
 $sql = "SELECT q.id, q.name
           FROM {question} q
           JOIN {question_versions} qv ON qv.questionid = q.id
@@ -82,6 +84,7 @@ foreach ($questions as $record) {
     }
 
     if ($runreference) {
+        // grade_response использует тот же Jobe, что и обычная попытка студента.
         $question->start_attempt(null);
         [$fraction] = $question->grade_response(['answer' => $question->answer]);
         if ((float) $fraction !== 1.0) {

@@ -5,6 +5,7 @@ namespace local_aicodehelper;
 
 defined('MOODLE_INTERNAL') || die();
 
+/** Проверяет capability, sesskey и защиту кэша от дубликатов. */
 final class security_test extends \advanced_testcase {
     public function test_user_without_capability_cannot_analyze(): void {
         $this->resetAfterTest();

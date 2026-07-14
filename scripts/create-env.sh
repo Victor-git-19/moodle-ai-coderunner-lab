@@ -15,6 +15,7 @@ if [[ ! -f "$EXAMPLE_FILE" ]]; then
     exit 1
 fi
 
+# OpenSSL удобнее, но запасной вариант работает и на минимальной Ubuntu.
 generate_password() {
     if command -v openssl >/dev/null 2>&1; then
         openssl rand -hex 16
@@ -23,6 +24,7 @@ generate_password() {
     fi
 }
 
+# Заменить одно значение, не затрагивая остальные строки .env.
 set_env_value() {
     local key="$1"
     local value="$2"
@@ -46,7 +48,7 @@ sed -i.bak \
     "$ENV_FILE"
 rm -f "$ENV_FILE.bak"
 
-# Command-line environment values make a fresh server deploy possible in one command.
+# Значения из командной строки позволяют развернуть сервер одной командой.
 [[ -n "${MOODLE_PORT:-}" ]] && set_env_value MOODLE_PORT "$MOODLE_PORT"
 [[ -n "${MOODLE_URL:-}" ]] && set_env_value MOODLE_URL "$MOODLE_URL"
 [[ -n "${MOODLE_SITE_NAME:-}" ]] && set_env_value MOODLE_SITE_NAME "$MOODLE_SITE_NAME"

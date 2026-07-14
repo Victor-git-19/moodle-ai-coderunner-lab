@@ -1,6 +1,7 @@
 name: moodle-ai-coderunner-lab
 
 services:
+  # MariaDB хранит пользователей, курсы, вопросы и попытки Moodle.
   db:
     image: mariadb:11.4.12
     restart: unless-stopped
@@ -19,6 +20,7 @@ services:
       retries: 20
       start_period: 30s
 
+  # Официальный sandbox выполняет код; AI service код не запускает.
   jobe:
     build:
       context: https://github.com/trampgeek/jobeinabox.git#7727d8f071dda3a0a54e95328646a5c9cc95423f
@@ -33,6 +35,7 @@ services:
       retries: 10
       start_period: 60s
 
+  # Moodle — единственный сервис, опубликованный наружу.
   moodle:
     build:
       context: .
@@ -68,6 +71,7 @@ services:
       retries: 20
       start_period: 120s
 
+  # Ollama доступна только другим контейнерам проекта.
   ollama:
     image: ollama/ollama:0.30.11
     restart: unless-stopped
@@ -83,6 +87,7 @@ services:
       retries: 20
       start_period: 30s
 
+  # Одноразовый bootstrap скачивает модель только при её отсутствии.
   ollama-model:
     image: ollama/ollama:0.30.11
     depends_on:
@@ -97,6 +102,7 @@ services:
         ollama show "$${OLLAMA_MODEL}" >/dev/null 2>&1 || ollama pull "$${OLLAMA_MODEL}"
     restart: "no"
 
+  # FastAPI объединяет безопасный AST-анализ и ответ локальной модели.
   ai-service:
     build:
       context: .
@@ -119,6 +125,7 @@ services:
       start_period: 20s
 
 volumes:
+  # Именованные volumes сохраняют данные после обычного docker compose down.
   db_data:
   moodledata:
   ollama_data:
@@ -127,4 +134,5 @@ networks:
   default:
     ipam:
       config:
+        # Отдельная тестовая подсеть уменьшает риск пересечения с локальной сетью сервера.
         - subnet: 198.18.0.0/24

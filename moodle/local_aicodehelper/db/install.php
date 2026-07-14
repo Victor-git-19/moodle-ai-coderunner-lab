@@ -3,6 +3,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+/** Задать безопасные настройки при первой установке плагина. */
 function xmldb_local_aicodehelper_install(): void {
     set_config('integrationenabled', 1, 'local_aicodehelper');
     set_config('showaftergrading', 1, 'local_aicodehelper');

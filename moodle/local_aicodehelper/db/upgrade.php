@@ -3,6 +3,12 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+/**
+ * Обновить таблицы и настройки уже установленного плагина.
+ *
+ * @param int $oldversion Предыдущая версия плагина.
+ * @return bool true после успешного обновления.
+ */
 function xmldb_local_aicodehelper_upgrade(int $oldversion): bool {
     global $DB;
 

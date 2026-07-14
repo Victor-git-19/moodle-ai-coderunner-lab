@@ -1,6 +1,6 @@
 #!/usr/bin/env php
 <?php
-// Installs the demo Python course through Moodle APIs. Safe to run repeatedly.
+// Устанавливает учебный курс через API Moodle. Повторный запуск не создаёт копию.
 
 define('CLI_SCRIPT', true);
 
@@ -21,17 +21,17 @@ require_once $CFG->dirroot . '/question/format/xml/format.php';
 use core_question\local\bank\question_bank_helper;
 use mod_quiz\quiz_settings;
 
-/** Escape a value for Moodle XML. */
+/** Экранировать обычное значение для Moodle XML. */
 function xml_value(string $value): string {
     return htmlspecialchars($value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
 }
 
-/** Preserve code and test whitespace exactly as the official CodeRunner export does. */
+/** Сохранить пробелы в коде и тестах с помощью XML CDATA. */
 function xml_cdata(string $value): string {
     return '<![CDATA[' . str_replace(']]>', ']]]]><![CDATA[>', $value) . ']]>';
 }
 
-/** Build the HTML shown in a CodeRunner question. */
+/** Собрать понятное условие вопроса CodeRunner. */
 function build_question_html(array $task): string {
     $html = '<p>' . s($task['description']) . '</p>';
     $html .= '<p><strong>Входные данные:</strong> ' . s($task['input']) . '</p>';
@@ -40,7 +40,7 @@ function build_question_html(array $task): string {
     return $html;
 }
 
-/** Convert all course tasks to Moodle XML understood by CodeRunner. */
+/** Преобразовать задания курса в стандартный Moodle XML для CodeRunner. */
 function build_question_xml(array $sections): string {
     $xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<quiz>\n";
 
@@ -97,7 +97,7 @@ function build_question_xml(array $sections): string {
     return $xml . "</quiz>\n";
 }
 
-/** Add a page resource and return its course-module data. */
+/** Добавить в раздел страницу с теорией. */
 function add_course_page(stdClass $course, int $sectionnumber, array $page): stdClass {
     [, , , , $data] = prepare_new_moduleinfo_data($course, 'page', $sectionnumber);
     $data->name = $page['name'];
@@ -112,7 +112,7 @@ function add_course_page(stdClass $course, int $sectionnumber, array $page): std
     return add_moduleinfo($data, $course);
 }
 
-/** Add the hidden question bank used by the five quizzes. */
+/** Добавить скрытый банк вопросов для пяти тестов курса. */
 function add_question_bank(stdClass $course): stdClass {
     [, , , , $data] = prepare_new_moduleinfo_data($course, 'qbank', 0);
     $data->name = 'Банк задач курса Python';
@@ -125,7 +125,7 @@ function add_question_bank(stdClass $course): stdClass {
     return add_moduleinfo($data, $course);
 }
 
-/** Add a quiz with safe review settings for programming practice. */
+/** Добавить тест с настройками просмотра, которые не раскрывают правильный ответ. */
 function add_course_quiz(stdClass $course, int $sectionnumber, array $quiz): stdClass {
     [, , , , $data] = prepare_new_moduleinfo_data($course, 'quiz', $sectionnumber);
     $data->name = $quiz['name'];
@@ -170,7 +170,7 @@ function add_course_quiz(stdClass $course, int $sectionnumber, array $quiz): std
     return add_moduleinfo($data, $course);
 }
 
-/** Import the generated XML into a module-level question category. */
+/** Импортировать Moodle XML в категорию банка вопросов курса. */
 function import_questions(stdClass $course, stdClass $category, context_module $context, string $xml): void {
     $filename = make_request_directory() . '/python-course.xml';
     if (file_put_contents($filename, $xml) === false) {
@@ -199,7 +199,7 @@ function import_questions(stdClass $course, stdClass $category, context_module $
     }
 }
 
-/** Return the current question IDs by their unique course names. */
+/** Получить ID импортированных вопросов по их уникальным названиям. */
 function get_course_question_ids(int $categoryid): array {
     global $DB;
 
@@ -222,6 +222,7 @@ function get_course_question_ids(int $categoryid): array {
 }
 
 $content = require __DIR__ . '/content.php';
+// Shortname служит устойчивым идентификатором и защищает от повторной установки.
 $existing = $DB->get_record('course', ['shortname' => $content['shortname']]);
 if ($existing) {
     echo "Python course already exists (course id {$existing->id}).\n";
@@ -235,6 +236,7 @@ if (!$DB->record_exists('course_categories', ['id' => $categoryid])) {
 }
 
 \core\session\manager::set_user(get_admin());
+// При любой ошибке транзакция отменяет создание неполного курса.
 $transaction = $DB->start_delegated_transaction();
 
 try {

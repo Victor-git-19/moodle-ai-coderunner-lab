@@ -1,6 +1,7 @@
 (function() {
     'use strict';
 
+    // Moodle помещает номер вопроса (slot) в id контейнера.
     function questionSlot(element) {
         var match = element.id.match(/question-\d+-(\d+)/);
         return match ? Number(match[1]) : 0;
@@ -9,6 +10,26 @@
     function graded(element) {
         return element.classList.contains('gradedright') || element.classList.contains('gradedwrong') ||
             element.classList.contains('gradedpartial') || Boolean(element.querySelector('.coderunner-test-results'));
+    }
+
+    async function requestAnalysis(config, slot) {
+        // Запрос идёт в PHP-плагин Moodle. Внутренний адрес AI service браузеру не передаётся.
+        var body = new URLSearchParams({
+            attemptid: String(config.attemptId),
+            slot: String(slot),
+            sesskey: config.sesskey,
+        });
+        var response = await fetch(config.endpoint, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+            body: body.toString(),
+        });
+        var data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || config.strings.error);
+        }
+        return data;
     }
 
     function addButton(question, config) {
@@ -37,40 +58,26 @@
         var feedback = question.querySelector('.specificfeedback') || question;
         feedback.appendChild(wrapper);
 
-        button.addEventListener('click', function() {
+        button.addEventListener('click', async function() {
             if (button.disabled) {
                 return;
             }
+            // disabled защищает от нескольких параллельных запросов одним нажатием.
             button.disabled = true;
             button.textContent = config.strings.loading;
             status.textContent = '';
-            var body = new URLSearchParams({
-                attemptid: String(config.attemptId),
-                slot: String(slot),
-                sesskey: config.sesskey,
-            });
-            fetch(config.endpoint, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
-                body: body.toString(),
-            }).then(function(response) {
-                return response.json().then(function(data) {
-                    if (!response.ok || !data.success) {
-                        throw new Error(data.error || config.strings.error);
-                    }
-                    return data;
-                });
-            }).then(function(data) {
+
+            try {
+                var data = await requestAnalysis(config, slot);
                 status.textContent = '';
                 result.innerHTML = data.html;
                 button.textContent = config.strings.showAgain;
-                button.disabled = false;
-            }).catch(function(error) {
+            } catch (error) {
                 status.textContent = error.message || config.strings.error;
                 button.textContent = config.strings.button;
+            } finally {
                 button.disabled = false;
-            });
+            }
         });
     }
 
@@ -79,6 +86,7 @@
         if (!config) {
             return;
         }
+        // Кнопка добавляется только к контейнерам вопросов CodeRunner.
         document.querySelectorAll('.que.coderunner').forEach(function(question) {
             addButton(question, config);
         });

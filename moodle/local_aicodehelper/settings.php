@@ -7,6 +7,7 @@ if ($hassiteconfig) {
     $settings = new admin_settingpage('local_aicodehelper', get_string('pluginname', 'local_aicodehelper'));
     $ADMIN->add('localplugins', $settings);
 
+    // Настройки намеренно собраны на одной стандартной странице Moodle.
     $settings->add(new admin_setting_configcheckbox(
         'local_aicodehelper/integrationenabled',
         get_string('integrationenabled', 'local_aicodehelper'),

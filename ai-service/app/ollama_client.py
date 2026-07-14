@@ -1,3 +1,5 @@
+"""Формирование учебного запроса к локальной модели Ollama."""
+
 import json
 import os
 from typing import Any
@@ -13,6 +15,8 @@ OLLAMA_TIMEOUT = float(os.getenv("AI_TIMEOUT", "60"))
 
 
 def build_prompt(request: AnalyzeRequest, static_data: dict[str, Any]) -> str:
+    """Собрать короткий промпт с кодом и уже известными результатами CodeRunner."""
+
     permission = (
         "Можно показать небольшой исправленный фрагмент, но не переписывай всё решение."
         if request.allow_full_solution
@@ -37,6 +41,8 @@ def build_prompt(request: AnalyzeRequest, static_data: dict[str, Any]) -> str:
 
 
 async def analyze_with_ollama(request: AnalyzeRequest, static_data: dict[str, Any]) -> AnalyzeResponse:
+    """Получить JSON от Ollama и привести его к строгой схеме ответа."""
+
     payload = {
         "model": OLLAMA_MODEL,
         "prompt": build_prompt(request, static_data),

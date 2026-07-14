@@ -1,3 +1,5 @@
+"""Безопасный статический анализ Python через стандартный модуль ast."""
+
 import ast
 from typing import Any, Literal
 
@@ -12,6 +14,8 @@ def make_issue(
     hint: str,
     line: int | None = None,
 ) -> dict[str, Any]:
+    """Собрать одну проблему в формате ответа API."""
+
     return {
         "severity": severity,
         "title": title,
@@ -22,6 +26,8 @@ def make_issue(
 
 
 def attempt_verdict(request: AnalyzeRequest, issues: list[dict[str, Any]]) -> str:
+    """Сформулировать общий вывод прежде всего по результатам CodeRunner."""
+
     if request.timeout:
         return "CodeRunner остановил решение по времени; сначала найдите самую дорогую часть алгоритма."
     if request.memory_limit:
@@ -41,6 +47,8 @@ def attempt_verdict(request: AnalyzeRequest, issues: list[dict[str, Any]]) -> st
 
 
 def failed_test_analysis(request: AnalyzeRequest) -> list[str]:
+    """Объяснить возможные причины неудачи без раскрытия тестов."""
+
     result: list[str] = []
     if request.compiler_message:
         result.append("CodeRunner сообщил об ошибке компиляции или синтаксиса; проверку нужно начать с неё.")
@@ -58,6 +66,8 @@ def failed_test_analysis(request: AnalyzeRequest) -> list[str]:
 
 
 def next_step(request: AnalyzeRequest, issues: list[dict[str, Any]]) -> str:
+    """Выбрать одно конкретное следующее действие для студента."""
+
     if request.compiler_message:
         return "Исправьте первую ошибку компилятора и повторите проверку CodeRunner."
     if request.runtime_error:
@@ -74,6 +84,9 @@ def next_step(request: AnalyzeRequest, issues: list[dict[str, Any]]) -> str:
 
 
 def hardcode_warnings(nodes: list[ast.AST], request: AnalyzeRequest) -> list[str]:
+    """Найти только признаки возможного хардкода, не объявляя его доказанным."""
+
+    # ast.walk читает структуру программы, но никогда не запускает код студента.
     calls = [node for node in nodes if isinstance(node, ast.Call)]
     input_calls = [
         node for node in calls
@@ -118,32 +131,34 @@ def hardcode_warnings(nodes: list[ast.AST], request: AnalyzeRequest) -> list[str
     return warnings
 
 
-def analyze_python(request: AnalyzeRequest) -> dict[str, Any]:
-    try:
-        tree = ast.parse(request.code)
-    except SyntaxError as error:
-        line = error.lineno
-        return response_data(
-            verdict="Решение пока нельзя проверить: в коде есть синтаксическая ошибка.",
-            strengths=["Код получен и безопасно разобран без запуска."],
-            issues=[make_issue(
-                "error",
-                "Синтаксическая ошибка",
-                f"Интерпретатор не может разобрать строку {line or '?'}: {error.msg}.",
-                "Проверьте скобки, двоеточия и структуру указанной строки.",
-                line,
-            )],
-            failed_test_analysis=failed_test_analysis(request),
-            edge_cases=["Минимальный допустимый ввод", "Пустой ввод, если он разрешён условием"],
-            complexity={
-                "time": "Не определена",
-                "memory": "Не определена",
-                "comment": "Сначала исправьте синтаксис.",
-            },
-            next_step=f"Исправьте синтаксис в строке {line or '?'} и снова запустите проверку CodeRunner.",
-        )
+def syntax_error_response(request: AnalyzeRequest, error: SyntaxError) -> dict[str, Any]:
+    """Сформировать понятный ответ для кода, который не удалось разобрать."""
 
-    nodes = list(ast.walk(tree))
+    line = error.lineno
+    return response_data(
+        verdict="Решение пока нельзя проверить: в коде есть синтаксическая ошибка.",
+        strengths=["Код получен и безопасно разобран без запуска."],
+        issues=[make_issue(
+            "error",
+            "Синтаксическая ошибка",
+            f"Интерпретатор не может разобрать строку {line or '?'}: {error.msg}.",
+            "Проверьте скобки, двоеточия и структуру указанной строки.",
+            line,
+        )],
+        failed_test_analysis=failed_test_analysis(request),
+        edge_cases=["Минимальный допустимый ввод", "Пустой ввод, если он разрешён условием"],
+        complexity={
+            "time": "Не определена",
+            "memory": "Не определена",
+            "comment": "Сначала исправьте синтаксис.",
+        },
+        next_step=f"Исправьте синтаксис в строке {line or '?'} и снова запустите проверку CodeRunner.",
+    )
+
+
+def estimate_complexity(nodes: list[ast.AST]) -> dict[str, str]:
+    """Грубо оценить сложность по вложенным циклам и создаваемым коллекциям."""
+
     loops = [node for node in nodes if isinstance(node, (ast.For, ast.While, ast.comprehension))]
     nested_loop = any(
         isinstance(child, (ast.For, ast.While, ast.comprehension))
@@ -151,6 +166,26 @@ def analyze_python(request: AnalyzeRequest) -> dict[str, Any]:
         for child in ast.walk(loop)
         if child is not loop
     )
+    creates_collection = any(
+        isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp)) for node in nodes
+    )
+    return {
+        "time": "O(n²)" if nested_loop else ("O(n)" if loops else "O(1)"),
+        "memory": "O(n)" if creates_collection else "O(1)",
+        "comment": "Оценка получена статически по структуре циклов и создаваемых коллекций.",
+    }
+
+
+def analyze_python(request: AnalyzeRequest) -> dict[str, Any]:
+    """Разобрать Python-код и оценить его структуру без выполнения."""
+
+    try:
+        tree = ast.parse(request.code)
+    except SyntaxError as error:
+        return syntax_error_response(request, error)
+
+    # Один плоский список узлов упрощает последующие небольшие проверки.
+    nodes = list(ast.walk(tree))
     functions = [node.name for node in nodes if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
     calls = [node.func.id for node in nodes if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)]
 
@@ -188,15 +223,7 @@ def analyze_python(request: AnalyzeRequest) -> dict[str, Any]:
         issues=issues,
         failed_test_analysis=failed_test_analysis(request),
         edge_cases=["Пустой или минимальный ввод", "Отрицательные числа", "Повторяющиеся значения"],
-        complexity={
-            "time": "O(n²)" if nested_loop else ("O(n)" if loops else "O(1)"),
-            "memory": (
-                "O(n)"
-                if any(isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp)) for node in nodes)
-                else "O(1)"
-            ),
-            "comment": "Оценка получена статически по структуре циклов и создаваемых коллекций.",
-        },
+        complexity=estimate_complexity(nodes),
         style=style,
         hardcode_warnings=hardcode_warnings(nodes, request),
         next_step=next_step(request, issues),
@@ -204,6 +231,8 @@ def analyze_python(request: AnalyzeRequest) -> dict[str, Any]:
 
 
 def analyze_code(request: AnalyzeRequest) -> dict[str, Any]:
+    """Выбрать AST-анализ Python или общий разбор результатов CodeRunner."""
+
     if request.language.lower() in {"python", "python3"}:
         return analyze_python(request)
     return response_data(

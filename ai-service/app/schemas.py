@@ -1,9 +1,13 @@
+"""Pydantic-схемы единственного запроса и ответа AI service."""
+
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 
 class TestResult(BaseModel):
+    """Безопасная часть результата одного теста CodeRunner."""
+
     number: int = Field(ge=1)
     passed: bool
     hidden: bool = False
@@ -13,6 +17,8 @@ class TestResult(BaseModel):
 
 
 class AnalyzeRequest(BaseModel):
+    """Данные попытки, которые Moodle разрешает отправить на анализ."""
+
     language: str = Field(default="python", max_length=30)
     task: str = Field(default="", max_length=5000)
     question_name: str = Field(default="", max_length=500)
@@ -35,6 +41,8 @@ class AnalyzeRequest(BaseModel):
 
 
 class Issue(BaseModel):
+    """Одна найденная проблема и подсказка без готового решения."""
+
     severity: Literal["error", "warning", "info"]
     title: str
     explanation: str
@@ -43,12 +51,16 @@ class Issue(BaseModel):
 
 
 class Complexity(BaseModel):
+    """Оценка времени и памяти алгоритма."""
+
     time: str
     memory: str
     comment: str
 
 
 class AnalyzeResponse(BaseModel):
+    """Структурированный преподавательский ответ для Moodle."""
+
     verdict: str
     strengths: list[str]
     issues: list[Issue]

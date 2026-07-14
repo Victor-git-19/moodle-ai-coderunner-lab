@@ -25,6 +25,7 @@ RUN apt-get update \
 
 WORKDIR /var/www/html
 
+# Moodle и сторонние плагины закреплены на проверенных версиях.
 RUN curl -fsSL "https://github.com/moodle/moodle/archive/refs/tags/v${MOODLE_VERSION}.tar.gz" \
         | tar -xz --strip-components=1 \
     && mkdir -p public/question/type/coderunner public/question/behaviour/adaptive_adapted_for_coderunner \
@@ -35,6 +36,7 @@ RUN curl -fsSL "https://github.com/moodle/moodle/archive/refs/tags/v${MOODLE_VER
     && chown -R root:www-data /var/www/html
 
 COPY moodle/php.ini /usr/local/etc/php/conf.d/moodle.ini
+# Собственный плагин и курс добавляются при сборке, а не вручную в контейнере.
 COPY --chown=root:www-data moodle/local_aicodehelper /var/www/html/public/local/aicodehelper
 COPY --chown=root:www-data course /opt/python-course
 COPY --chmod=755 moodle/entrypoint.sh /usr/local/bin/moodle-entrypoint

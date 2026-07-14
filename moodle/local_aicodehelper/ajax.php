@@ -7,7 +7,23 @@ require_once($CFG->dirroot . '/mod/quiz/locallib.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
+/**
+ * Отправить браузеру готовый безопасный HTML и завершить запрос.
+ *
+ * @param array $analysis Структурированный ответ AI service.
+ * @param bool $cached Был ли ответ взят из кэша.
+ */
+function local_aicodehelper_send_analysis(array $analysis, bool $cached): void {
+    echo json_encode([
+        'success' => true,
+        'cached' => $cached,
+        'html' => \local_aicodehelper\output_renderer::render($analysis),
+    ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    exit;
+}
+
 try {
+    // Все проверки доступа выполняются до чтения попытки и обращения к AI service.
     require_sesskey();
     $attemptid = required_param('attemptid', PARAM_INT);
     $slot = required_param('slot', PARAM_INT);
@@ -39,14 +55,9 @@ try {
     if ($cached) {
         $analysis = json_decode($cached->responsejson, true, 30, JSON_THROW_ON_ERROR);
         if (empty($analysis['fallback_used'])) {
-            echo json_encode([
-                'success' => true,
-                'cached' => true,
-                'html' => \local_aicodehelper\output_renderer::render($analysis),
-            ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-            exit;
+            local_aicodehelper_send_analysis($analysis, true);
         }
-        // A temporary Ollama failure must not permanently pin this step to static fallback.
+        // Временный сбой Ollama не должен навсегда закреплять fallback за этой попыткой.
         $cachedfallback = $cached;
     }
 
@@ -66,14 +77,10 @@ try {
     $payload = \local_aicodehelper\payload_builder::from_attempt($attempt, $slot);
     $analysis = \local_aicodehelper\service_client::analyze($payload);
     if (!empty($analysis['fallback_used'])) {
-        echo json_encode([
-            'success' => true,
-            'cached' => false,
-            'html' => \local_aicodehelper\output_renderer::render($analysis),
-        ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-        exit;
+        local_aicodehelper_send_analysis($analysis, false);
     }
 
+    $iscached = false;
     if ($cachedfallback) {
         $cachedfallback->responsejson = json_encode(
             $analysis,
@@ -81,33 +88,22 @@ try {
         );
         $cachedfallback->timecreated = time();
         $DB->update_record('local_aicodehelper_analysis', $cachedfallback);
-        echo json_encode([
-            'success' => true,
-            'cached' => false,
-            'html' => \local_aicodehelper\output_renderer::render($analysis),
-        ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-        exit;
+    } else {
+        $record = (object) ($conditions + [
+            'responsejson' => json_encode($analysis, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            'timecreated' => time(),
+        ]);
+        try {
+            $DB->insert_record('local_aicodehelper_analysis', $record);
+        } catch (dml_write_exception) {
+            // Параллельный запрос мог первым записать тот же шаг. Возвращаем его результат.
+            $cached = $DB->get_record('local_aicodehelper_analysis', $conditions, '*', MUST_EXIST);
+            $analysis = json_decode($cached->responsejson, true, 30, JSON_THROW_ON_ERROR);
+            $iscached = true;
+        }
     }
 
-    $record = (object) ($conditions + [
-        'responsejson' => json_encode($analysis, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-        'timecreated' => time(),
-    ]);
-    $iscached = false;
-    try {
-        $DB->insert_record('local_aicodehelper_analysis', $record);
-    } catch (dml_write_exception) {
-        // A parallel request may have inserted the same step. Return that cached result.
-        $cached = $DB->get_record('local_aicodehelper_analysis', $conditions, '*', MUST_EXIST);
-        $analysis = json_decode($cached->responsejson, true, 30, JSON_THROW_ON_ERROR);
-        $iscached = true;
-    }
-
-    echo json_encode([
-        'success' => true,
-        'cached' => $iscached,
-        'html' => \local_aicodehelper\output_renderer::render($analysis),
-    ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    local_aicodehelper_send_analysis($analysis, $iscached);
 } catch (Throwable $exception) {
     http_response_code($exception instanceof invalid_parameter_exception ? 400 : 403);
     debugging($exception->getMessage(), DEBUG_DEVELOPER);

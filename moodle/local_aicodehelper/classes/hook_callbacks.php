@@ -5,7 +5,15 @@ namespace local_aicodehelper;
 
 defined('MOODLE_INTERNAL') || die();
 
+/** Подключает кнопку анализа только на страницах попытки и просмотра теста. */
 final class hook_callbacks {
+    /**
+     * Передать браузеру только публичный AJAX-адрес и настройки интерфейса.
+     *
+     * Внутренний адрес AI service остаётся на стороне PHP и сюда не попадает.
+     *
+     * @param \core\hook\output\before_footer_html_generation $hook Hook Moodle перед выводом footer.
+     */
     public static function before_footer_html_generation(
         \core\hook\output\before_footer_html_generation $hook,
     ): void {
@@ -26,6 +34,7 @@ final class hook_callbacks {
             return;
         }
 
+        // JSON содержит только сведения, необходимые кнопке на текущей странице.
         $config = [
             'attemptId' => $attemptid,
             'endpoint' => (new \moodle_url('/local/aicodehelper/ajax.php'))->out(false),

@@ -50,6 +50,21 @@ Moodle → local_aicodehelper → AI service → Ollama
 
 Версии Moodle и сторонних компонентов закреплены в `moodle/Dockerfile` и `compose.yaml`.
 
+## Как читать код проекта
+
+Основной поток можно проследить по нескольким файлам:
+
+1. `compose.yaml` запускает пять сервисов и соединяет их по именам.
+2. `moodle/entrypoint.sh` один раз устанавливает Moodle, плагины и учебный курс.
+3. `moodle/local_aicodehelper/classes/hook_callbacks.php` и `moodle/local_aicodehelper/integration.js` добавляют кнопку к результату CodeRunner.
+4. `moodle/local_aicodehelper/classes/payload_builder.php` собирает попытку и удаляет закрытые данные.
+5. `moodle/local_aicodehelper/ajax.php` проверяет пользователя, а `moodle/local_aicodehelper/classes/service_client.php` вызывает AI service.
+6. `ai-service/app/main.py` запускает статический анализ и обращается к Ollama.
+7. `ai-service/app/static_analysis.py` читает Python через `ast`, но не выполняет код.
+8. `moodle/local_aicodehelper/classes/output_renderer.php` экранирует и показывает ответ.
+
+Код курса находится отдельно в `course/content.php`, а автоматические проверки — в `ai-service/tests`, `moodle/local_aicodehelper/tests` и `scripts/smoke-test.sh`. Русские комментарии объясняют только неочевидные решения и границы безопасности; очевидные команды намеренно не закомментированы построчно.
+
 ## Быстрый запуск на Mac
 
 Нужен Docker Desktop с Compose. Рекомендуется 6 ГБ RAM и 20 ГБ свободного места.

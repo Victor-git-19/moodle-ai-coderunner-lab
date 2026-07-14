@@ -1,3 +1,5 @@
+"""Проверки API, fallback и связи анализа с результатами CodeRunner."""
+
 from fastapi.testclient import TestClient
 
 from app import main
@@ -9,6 +11,8 @@ client = TestClient(main.app)
 
 
 def fallback(monkeypatch) -> None:
+    """Подменить Ollama ожидаемым сбоем для проверки статического ответа."""
+
     async def fail(*_args, **_kwargs):
         raise ValueError("model is unavailable")
 
@@ -16,6 +20,8 @@ def fallback(monkeypatch) -> None:
 
 
 def analyze(monkeypatch, **overrides):
+    """Отправить типовой запрос, меняя только нужные тесту поля."""
+
     fallback(monkeypatch)
     payload = {
         "language": "python",

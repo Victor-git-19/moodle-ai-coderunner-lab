@@ -1,5 +1,5 @@
 <?php
-// Course content kept as plain data so it can be reviewed and changed in Git.
+// Содержимое курса хранится как обычный массив: его легко читать и менять в Git.
 
 return [
     'shortname' => 'PYTHON-CR-START',

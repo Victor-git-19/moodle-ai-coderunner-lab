@@ -9,12 +9,14 @@ if [[ ! -f .env ]]; then
     exit 1
 fi
 
+# Прочитать значение без небезопасного source файла .env.
 env_value() {
     awk -F= -v key="$1" '$1 == key {sub(/^[^=]*=/, ""); print; exit}' .env
 }
 
 MOODLE_URL="$(env_value MOODLE_URL)"
 
+# Проверяем не только контейнеры, но и реальные пользовательские сценарии.
 curl -fsSL --max-time 15 "${MOODLE_URL%/}/login/index.php" >/dev/null
 echo "Moodle page: OK"
 
@@ -43,6 +45,7 @@ echo "Jobe Python execution: OK"
 docker compose exec -T moodle curl -fsS http://ai-service:8000/health >/dev/null
 echo "AI endpoint: OK"
 
+# Формируем открытый и закрытые тесты и проверяем границу безопасности payload.
 safe_payload="$(docker compose exec -T moodle php <<'PHP'
 <?php
 define('CLI_SCRIPT', true);
@@ -90,6 +93,7 @@ if grep -q 'SECRET_' <<<"$safe_payload"; then
 fi
 echo "Safe CodeRunner payload: OK"
 
+# AI service должен вернуть все разделы преподавательского ответа.
 ai_response="$(printf '%s' "$safe_payload" | docker compose exec -T moodle curl -fsS \
     -H 'Content-Type: application/json' \
     --data-binary @- \
@@ -110,6 +114,7 @@ assert "fallback_used" in result, result
 ' >/dev/null
 echo "Structured teacher analysis: OK"
 
+# Заведомо неверный адрес Ollama проверяет работу статического fallback.
 docker compose run --rm --no-deps \
     -e OLLAMA_URL=http://127.0.0.1:1 \
     -e AI_TIMEOUT=0.2 \
@@ -122,6 +127,7 @@ assert result.fallback_used is True
 ' >/dev/null
 echo "AI fallback: OK"
 
+# Последние проверки подтверждают установку плагинов и полный путь CodeRunner → Jobe.
 docker compose exec -T moodle test -f /var/www/html/public/question/type/coderunner/version.php
 docker compose exec -T moodle php /var/www/html/admin/cli/cfg.php \
     --component=qtype_coderunner --name=jobe_host | grep -qx 'jobe'

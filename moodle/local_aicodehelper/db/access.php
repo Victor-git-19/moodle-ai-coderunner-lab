@@ -3,6 +3,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+// Право проверяется в контексте конкретного теста, а не для всего сайта.
 $capabilities = [
     'local/aicodehelper:analyzeattempt' => [
         'captype' => 'read',

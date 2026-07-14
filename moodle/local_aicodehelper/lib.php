@@ -4,7 +4,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Add the helper page to the main navigation for signed-in users.
+ * Добавить страницу помощника в навигацию авторизованного пользователя.
  *
  * @param global_navigation $navigation
  */
@@ -17,4 +17,3 @@ function local_aicodehelper_extend_navigation(global_navigation $navigation): vo
         );
     }
 }
-

@@ -1,9 +1,10 @@
 <?php
-// Lightweight checks that run against the already installed training stand.
+// Короткие проверки против уже установленного учебного стенда.
 
 define('CLI_SCRIPT', true);
 require __DIR__ . '/../../../../config.php';
 
+/** Завершить проверку исключением, если условие не выполнено. */
 function check(bool $condition, string $message): void {
     if (!$condition) {
         throw new RuntimeException($message);
