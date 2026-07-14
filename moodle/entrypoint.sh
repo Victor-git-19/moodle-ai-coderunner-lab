@@ -19,6 +19,7 @@ done
 
 echo "Waiting for MariaDB..."
 until php -r '
+    mysqli_report(MYSQLI_REPORT_OFF);
     $db = @new mysqli("db", getenv("DB_USER"), getenv("DB_PASSWORD"), getenv("DB_NAME"));
     exit($db->connect_errno ? 1 : 0);
 '; do
@@ -58,6 +59,7 @@ PHP
 fi
 
 if ! php -r '
+    mysqli_report(MYSQLI_REPORT_OFF);
     $db = @new mysqli("db", getenv("DB_USER"), getenv("DB_PASSWORD"), getenv("DB_NAME"));
     $result = $db->query("SELECT 1 FROM mdl_config LIMIT 1");
     exit($result ? 0 : 1);
@@ -81,6 +83,11 @@ runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" \
     --component=local_aicodehelper --name=endpoint --set="$AI_SERVICE_URL"
 runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" \
     --component=local_aicodehelper --name=timeout --set="${AI_TIMEOUT:-60}"
+
+echo "Checking the demo Python course..."
+runuser -u www-data -- env MOODLE_CONFIG="$CONFIG_FILE" \
+    php /opt/python-course/install.php
+
 runuser -u www-data -- php "$MOODLE_DIR/admin/cli/purge_caches.php"
 
 echo "Moodle is ready."

@@ -6,11 +6,12 @@
 
 ## Что переносится
 
-Из репозитория нужны три части:
+Из репозитория нужны четыре части:
 
 - `moodle/local_aicodehelper` — собственный Moodle-плагин;
 - `ai-service` — серверный сервис анализа;
 - Ollama и модель из `compose.yaml`.
+- `course` — исходники демонстрационного курса по Python, если он нужен в Moodle института.
 
 Плагин CodeRunner остаётся источником результата проверки. Jobe выполняет код. AI service код не запускает, а только анализирует его и разрешённые студенту результаты тестов.
 
@@ -169,6 +170,28 @@ sudo -u www-data php /var/www/moodle/admin/cli/purge_caches.php
 ```
 
 Capability `local/aicodehelper:analyzeattempt` по умолчанию разрешена студенту, преподавателю и менеджеру. Проверьте её в ролях Moodle и при необходимости ограничьте на уровне курса или теста.
+
+## Установка демонстрационного курса
+
+Этот шаг необязателен. Он создаёт отдельный курс `PYTHON-CR-START` с теорией и 15 задачами CodeRunner. Существующие курсы не изменяются.
+
+После проверки CodeRunner запустите из корня репозитория:
+
+```bash
+sudo -u www-data env MOODLE_CONFIG=/var/www/moodle/config.php \
+  php course/install.php
+```
+
+Если курс нужно создать не в категории с ID `1`, укажите категорию:
+
+```bash
+sudo -u www-data env \
+  MOODLE_CONFIG=/var/www/moodle/config.php \
+  PYTHON_COURSE_CATEGORY_ID=3 \
+  php course/install.php
+```
+
+Установщик использует штатные Moodle API и при повторном запуске не создаёт копию курса. После установки запишите преподавателей и студентов через обычный интерфейс Moodle. Подробности и состав курса описаны в [`course/README.md`](../course/README.md).
 
 ## Проверка интеграции
 

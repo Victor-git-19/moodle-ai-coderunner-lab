@@ -36,6 +36,7 @@ RUN curl -fsSL "https://github.com/moodle/moodle/archive/refs/tags/v${MOODLE_VER
 
 COPY moodle/php.ini /usr/local/etc/php/conf.d/moodle.ini
 COPY --chown=root:www-data moodle/local_aicodehelper /var/www/html/public/local/aicodehelper
+COPY --chown=root:www-data course /opt/python-course
 COPY --chmod=755 moodle/entrypoint.sh /usr/local/bin/moodle-entrypoint
 
 ENTRYPOINT ["moodle-entrypoint"]

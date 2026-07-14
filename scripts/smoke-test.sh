@@ -151,3 +151,6 @@ require "/var/www/html/config.php";
 exit($DB->record_exists("config_plugins", ["plugin" => "local_aicodehelper"]) ? 0 : 1);
 '
 echo "local_aicodehelper plugin: OK"
+
+docker compose exec -T moodle php /opt/python-course/check.php --run-reference >/dev/null
+echo "Python course (15 reference solutions): OK"

@@ -45,6 +45,7 @@ Moodle → local_aicodehelper → AI service → Ollama
 - Moodle-плагин `local_aicodehelper`;
 - кнопка анализа внутри попытки CodeRunner;
 - фильтрация скрытых тестов и AI-кэш;
+- автоматически устанавливаемый курс по Python с 15 задачами CodeRunner;
 - автоматические тесты и инструкции.
 
 Версии Moodle и сторонних компонентов закреплены в `moodle/Dockerfile` и `compose.yaml`.
@@ -68,6 +69,8 @@ docker compose logs -f ollama-model
 ```
 
 Moodle по умолчанию откроется на [http://localhost:8080](http://localhost:8080).
+
+При первом старте также создаётся курс «Основы Python: практика с CodeRunner». Он содержит пять тем, короткую теорию и 15 программных задач. Найти его можно по shortname `PYTHON-CR-START` в «Администрирование сайта → Курсы → Управление курсами». Описание курса: [course/README.md](course/README.md).
 
 Администратор создаётся только при первой установке. Логин и пароль находятся в `.env`:
 
@@ -108,7 +111,13 @@ make check
 make smoke
 ```
 
-`check` проверяет состояние пяти сервисов. `smoke` реально запускает Python через Jobe, вызывает AI service, проверяет fallback, плагины, sesskey и отсутствие скрытых данных в AI payload.
+`check` проверяет состояние пяти сервисов. `smoke` реально запускает Python через Jobe, вызывает AI service, проверяет fallback, плагины, учебный курс, sesskey и отсутствие скрытых данных в AI payload.
+
+Все эталонные решения курса можно отдельно выполнить через Jobe:
+
+```bash
+docker compose exec -T moodle php /opt/python-course/check.php --run-reference
+```
 
 ### CodeRunner вручную
 
@@ -201,3 +210,5 @@ make reset CONFIRM=yes
 - небольшая модель может ошибаться;
 - AI даёт подсказку и не заменяет результат CodeRunner;
 - перенос на действующий Moodle нужно сначала проверять на копии.
+
+Основа отчёта по практике находится в [docs/PRACTICE_REPORT.md](docs/PRACTICE_REPORT.md). Перед сдачей в неё нужно добавить свои титульные данные, результаты команд и скриншоты.
