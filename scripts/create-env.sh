@@ -23,6 +23,17 @@ generate_password() {
     fi
 }
 
+set_env_value() {
+    local key="$1"
+    local value="$2"
+    local escaped="$value"
+    escaped="${escaped//\\/\\\\}"
+    escaped="${escaped//&/\\&}"
+    escaped="${escaped//|/\\|}"
+    sed -i.bak "s|^${key}=.*|${key}=${escaped}|" "$ENV_FILE"
+    rm -f "$ENV_FILE.bak"
+}
+
 admin_password="$(generate_password)"
 db_password="$(generate_password)"
 db_root_password="$(generate_password)"
@@ -34,9 +45,18 @@ sed -i.bak \
     -e "s/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD=$db_root_password/" \
     "$ENV_FILE"
 rm -f "$ENV_FILE.bak"
+
+# Command-line environment values make a fresh server deploy possible in one command.
+[[ -n "${MOODLE_PORT:-}" ]] && set_env_value MOODLE_PORT "$MOODLE_PORT"
+[[ -n "${MOODLE_URL:-}" ]] && set_env_value MOODLE_URL "$MOODLE_URL"
+[[ -n "${MOODLE_SITE_NAME:-}" ]] && set_env_value MOODLE_SITE_NAME "$MOODLE_SITE_NAME"
+[[ -n "${MOODLE_ADMIN_USER:-}" ]] && set_env_value MOODLE_ADMIN_USER "$MOODLE_ADMIN_USER"
+[[ -n "${MOODLE_ADMIN_EMAIL:-}" ]] && set_env_value MOODLE_ADMIN_EMAIL "$MOODLE_ADMIN_EMAIL"
+[[ -n "${OLLAMA_MODEL:-}" ]] && set_env_value OLLAMA_MODEL "$OLLAMA_MODEL"
+[[ -n "${TZ:-}" ]] && set_env_value TZ "$TZ"
+
 chmod 600 "$ENV_FILE"
 
 echo "Created .env"
 echo "Moodle admin password: $admin_password"
 echo "Save this password in a secure place."
-

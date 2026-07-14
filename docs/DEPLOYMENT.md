@@ -22,22 +22,21 @@ docker version
 docker compose version
 ```
 
-Клонируйте проект и создайте настройки:
+Клонируйте и запустите весь проект одной командой, заменив IP на адрес сервера:
 
 ```bash
-git clone https://github.com/Victor-git-19/moodle-ai-coderunner-lab.git
-cd moodle-ai-coderunner-lab
-make setup
-nano .env
+git clone https://github.com/Victor-git-19/moodle-ai-coderunner-lab.git && cd moodle-ai-coderunner-lab && MOODLE_URL=http://192.168.1.50:8080 ./scripts/deploy-server.sh
 ```
 
-Укажите IP или DNS-имя сервера:
+Скрипт создаёт `.env`, генерирует пароли, собирает контейнеры, ждёт их готовности и запускает smoke-тест. Если `8080` занят, используйте другой порт сразу в команде:
 
-```dotenv
-MOODLE_URL=http://192.168.1.50:8080
+```bash
+git clone https://github.com/Victor-git-19/moodle-ai-coderunner-lab.git && cd moodle-ai-coderunner-lab && MOODLE_PORT=8081 MOODLE_URL=http://192.168.1.50:8081 ./scripts/deploy-server.sh
 ```
 
-При необходимости измените `MOODLE_PORT`, название сайта и отдельную учётную запись администратора:
+Встроенный Jobe не публикует порт на Ubuntu-хост. Существующий Jobe на порту `9000` можно оставить запущенным: пересечения нет.
+
+Созданные настройки можно изменить после запуска. Например, можно изменить порт, название сайта и отдельную учётную запись администратора:
 
 ```dotenv
 MOODLE_ADMIN_USER=labadmin
@@ -45,17 +44,15 @@ MOODLE_ADMIN_PASSWORD=generated_password
 MOODLE_ADMIN_EMAIL=labadmin@example.local
 ```
 
-Модель выбирается переменной `OLLAMA_MODEL`. Для стенда по умолчанию используется `qwen2.5-coder:1.5b`.
+Модель выбирается переменной `OLLAMA_MODEL`. Для сервера с 4 ГБ RAM по умолчанию используется минимальная `qwen2.5-coder:0.5b` размером около 398 МБ.
 
-Соберите и запустите проект:
+Повторный запуск после изменения `.env`:
 
 ```bash
-make build
-make up
-docker compose logs -f ollama-model
+./scripts/deploy-server.sh
 ```
 
-После сообщения о готовности модели остановите просмотр логов клавишами `Ctrl+C` и выполните:
+Проверки при необходимости можно повторить отдельно:
 
 ```bash
 make check

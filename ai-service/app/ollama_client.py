@@ -8,7 +8,7 @@ from .response_builder import merge_model_response
 from .schemas import AnalyzeRequest, AnalyzeResponse
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:1.5b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:0.5b")
 OLLAMA_TIMEOUT = float(os.getenv("AI_TIMEOUT", "60"))
 
 

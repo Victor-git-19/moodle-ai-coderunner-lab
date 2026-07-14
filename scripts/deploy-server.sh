@@ -16,7 +16,10 @@ env_value() {
 command -v docker >/dev/null 2>&1 || fail "Docker is not installed."
 docker info >/dev/null 2>&1 || fail "Docker daemon is unavailable or the current user has no access."
 docker compose version >/dev/null 2>&1 || fail "Docker Compose Plugin is not installed."
-[[ -f .env ]] || fail "Missing .env. Run ./scripts/create-env.sh first."
+if [[ ! -f .env ]]; then
+    echo "Creating .env and generated passwords..."
+    ./scripts/create-env.sh
+fi
 
 MOODLE_PORT="$(env_value MOODLE_PORT)"
 MOODLE_URL="$(env_value MOODLE_URL)"
@@ -32,7 +35,10 @@ memory_mb="$(awk '/MemTotal/ {print int($2 / 1024)}' /proc/meminfo)"
 disk_mb="$(df -Pm "$ROOT_DIR" | awk 'NR == 2 {print $4}')"
 echo "Memory: ${memory_mb} MB"
 echo "Free disk space: ${disk_mb} MB"
-(( memory_mb >= 4096 )) || fail "At least 4 GB RAM is required; 6 GB or more is recommended."
+(( memory_mb >= 3500 )) || fail "At least 4 GB RAM is required."
+if (( memory_mb < 4096 )); then
+    echo "Warning: the server reports less than 4096 MB; the small Ollama model may respond slowly."
+fi
 (( disk_mb >= 20480 )) || fail "At least 20 GB of free disk space is required."
 
 echo "Building and starting services..."
@@ -54,3 +60,5 @@ done
 
 echo
 echo "Deployment completed: $MOODLE_URL"
+echo "Moodle admin: $(env_value MOODLE_ADMIN_USER)"
+echo "Moodle admin password: see MOODLE_ADMIN_PASSWORD in $ROOT_DIR/.env"

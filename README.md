@@ -61,7 +61,7 @@ make check
 make smoke
 ```
 
-`make setup` создаёт локальный `.env` и генерирует пароли. При первом старте Jobe собирается, а Ollama скачивает модель примерно на 1 ГБ. Ход загрузки виден так:
+`make setup` создаёт локальный `.env` и генерирует пароли. При первом старте Jobe собирается, а Ollama скачивает модель примерно на 400 МБ. Ход загрузки виден так:
 
 ```bash
 docker compose logs -f ollama-model
@@ -78,27 +78,26 @@ grep '^MOODLE_ADMIN_' .env
 Модель выбирается там же:
 
 ```dotenv
-OLLAMA_MODEL=qwen2.5-coder:1.5b
+OLLAMA_MODEL=qwen2.5-coder:0.5b
 ```
 
 После смены `OLLAMA_MODEL` выполните `make up`. Загрузчик проверит volume Ollama и скачает модель только при её отсутствии.
 
 ## Быстрый запуск на Ubuntu
 
-После установки Docker Engine, Docker Compose Plugin и Git:
+После установки Docker Engine, Docker Compose Plugin и Git весь стенд можно клонировать и запустить одной командой. Замените IP в команде на адрес сервера:
 
 ```bash
-git clone https://github.com/Victor-git-19/moodle-ai-coderunner-lab.git
-cd moodle-ai-coderunner-lab
-make setup
-nano .env
-make build
-make up
-make check
-make smoke
+git clone https://github.com/Victor-git-19/moodle-ai-coderunner-lab.git && cd moodle-ai-coderunner-lab && MOODLE_URL=http://192.168.1.50:8080 ./scripts/deploy-server.sh
 ```
 
-В `.env` замените `MOODLE_URL` на IP или DNS-имя сервера, например `http://192.168.1.50:8080`. Полная инструкция и перенос на действующий Moodle: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Скрипт сам создаст `.env`, сгенерирует пароли, соберёт контейнеры, дождётся сервисов и выполнит проверки. Если порт `8080` занят, сразу выберите другой:
+
+```bash
+git clone https://github.com/Victor-git-19/moodle-ai-coderunner-lab.git && cd moodle-ai-coderunner-lab && MOODLE_PORT=8081 MOODLE_URL=http://192.168.1.50:8081 ./scripts/deploy-server.sh
+```
+
+Jobe проекта работает только во внутренней Docker-сети и не публикует порт. Поэтому уже работающий на сервере Jobe с портом `9000` не мешает стенду. Полная инструкция: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Проверка работы
 
