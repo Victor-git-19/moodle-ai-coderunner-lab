@@ -80,6 +80,16 @@ fi
 
 echo "Upgrading Moodle and plugins..."
 runuser -u www-data -- php "$MOODLE_DIR/admin/cli/upgrade.php" --non-interactive
+
+# В Moodle 5 CodeRunner добавляет стандартные прототипы отдельной фоновой
+# задачей. Выполняем именно эту штатную задачу до установки учебного курса,
+# иначе свежая база ещё не знает прототип python3.
+runuser -u www-data -- php "$MOODLE_DIR/admin/cli/adhoc_task.php" \
+    --execute \
+    --classname='\qtype_coderunner\task\qtype_coderunner_setup_question_prototypes' \
+    --ignorelimits \
+    --force
+
 runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" \
     --component=qtype_coderunner --name=jobe_host --set=jobe
 runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" \
