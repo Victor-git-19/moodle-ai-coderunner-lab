@@ -16,8 +16,23 @@ env_value() {
 
 MOODLE_URL="$(env_value MOODLE_URL)"
 
+# После пересборки контейнер уже может быть запущен, пока Moodle ещё обновляет
+# базу и очищает кэш. Ждём готовую страницу, чтобы первый smoke-тест не падал.
+moodle_ready=false
+for attempt in {1..60}; do
+    if curl -fsSL --max-time 5 "${MOODLE_URL%/}/login/index.php" >/dev/null 2>&1; then
+        moodle_ready=true
+        break
+    fi
+    sleep 2
+done
+
+if [[ "$moodle_ready" != true ]]; then
+    echo "Moodle did not become ready within 120 seconds." >&2
+    exit 1
+fi
+
 # Проверяем не только контейнеры, но и реальные пользовательские сценарии.
-curl -fsSL --max-time 15 "${MOODLE_URL%/}/login/index.php" >/dev/null
 echo "Moodle page: OK"
 
 invalid_sesskey_status="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 \
