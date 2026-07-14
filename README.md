@@ -47,7 +47,7 @@ Moodle → local_aicodehelper → AI service → Ollama
 - фильтрация скрытых тестов и AI-кэш;
 - автоматические тесты и инструкции.
 
-Точные версии записаны в [docs/VERSIONS.md](docs/VERSIONS.md).
+Версии Moodle и сторонних компонентов закреплены в `moodle/Dockerfile` и `compose.yaml`.
 
 ## Быстрый запуск на Mac
 
@@ -201,5 +201,3 @@ make reset CONFIRM=yes
 - небольшая модель может ошибаться;
 - AI даёт подсказку и не заменяет результат CodeRunner;
 - перенос на действующий Moodle нужно сначала проверять на копии.
-
-Краткое устройство проекта описано в [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).

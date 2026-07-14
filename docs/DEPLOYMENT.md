@@ -1,249 +1,204 @@
-# Развёртывание
+# Интеграция с действующим Moodle 5.2.1
 
-Ниже два разных сценария. Для нового учебного сервера подходит весь Compose-проект. Для действующего Moodle СФТИ полный контейнер Moodle переносить не нужно.
+Эта инструкция нужна для Moodle института, который уже установлен и используется. Полный лабораторный Moodle, его базу, `config.php` и Docker volumes переносить не нужно.
 
-## Сценарий A: чистый Ubuntu-сервер
+Работы сначала выполняются на тестовой копии Moodle. Для production нужны резервная копия и согласованное окно обслуживания.
 
-Требования:
+## Что переносится
 
-- Ubuntu и пользователь `code`;
-- Git;
-- Docker Engine;
-- Docker Compose Plugin;
-- SSH-доступ;
-- не менее 4 ГБ RAM, лучше 6 ГБ;
-- не менее 20 ГБ свободного места.
+Из репозитория нужны три части:
 
-Проверьте инструменты:
+- `moodle/local_aicodehelper` — собственный Moodle-плагин;
+- `ai-service` — серверный сервис анализа;
+- Ollama и модель из `compose.yaml`.
 
-```bash
-git --version
-docker version
-docker compose version
+Плагин CodeRunner остаётся источником результата проверки. Jobe выполняет код. AI service код не запускает, а только анализирует его и разрешённые студенту результаты тестов.
+
+Не нужно изменять ядро Moodle, CodeRunner или Jobe.
+
+## Что проверить до установки
+
+- Moodle имеет версию строго 5.2.1;
+- используется PHP 8.3;
+- CodeRunner и `adaptive_adapted_for_coderunner` уже работают либо будут установлены администратором;
+- Python реально выполняется через Jobe;
+- PHP-сервер Moodle может обратиться к будущему AI service;
+- сохранены база Moodle, `moodledata`, код Moodle и текущие настройки CodeRunner.
+
+Версии, проверенные в лабораторном стенде:
+
+- CodeRunner 5.9.2;
+- `adaptive_adapted_for_coderunner` 1.4.5;
+- Jobe 2.2.2;
+- Ollama 0.30.11;
+- `qwen2.5-coder:0.5b` для сервера с 4 ГБ RAM.
+
+Если в институте уже установлены совместимые CodeRunner и Jobe, переустанавливать их не нужно.
+
+## Настройка существующего Jobe
+
+Сначала создайте обычный вопрос CodeRunner типа `python3` и выполните:
+
+```python
+print("Hello from Jobe")
 ```
 
-Клонируйте и запустите весь проект одной командой, заменив IP на адрес сервера:
-
-```bash
-git clone https://github.com/Victor-git-19/moodle-ai-coderunner-lab.git && cd moodle-ai-coderunner-lab && MOODLE_URL=http://192.168.1.50:8080 ./scripts/deploy-server.sh
-```
-
-Скрипт создаёт `.env`, генерирует пароли, собирает контейнеры, ждёт их готовности и запускает smoke-тест. Если `8080` занят, используйте другой порт сразу в команде:
-
-```bash
-git clone https://github.com/Victor-git-19/moodle-ai-coderunner-lab.git && cd moodle-ai-coderunner-lab && MOODLE_PORT=8081 MOODLE_URL=http://192.168.1.50:8081 ./scripts/deploy-server.sh
-```
-
-Встроенный Jobe не публикует порт на Ubuntu-хост. Существующий Jobe на порту `9000` можно оставить запущенным: пересечения нет.
-
-Созданные настройки можно изменить после запуска. Например, можно изменить порт, название сайта и отдельную учётную запись администратора:
-
-```dotenv
-MOODLE_ADMIN_USER=labadmin
-MOODLE_ADMIN_PASSWORD=generated_password
-MOODLE_ADMIN_EMAIL=labadmin@example.local
-```
-
-Модель выбирается переменной `OLLAMA_MODEL`. Для сервера с 4 ГБ RAM по умолчанию используется минимальная `qwen2.5-coder:0.5b` размером около 398 МБ.
-
-Повторный запуск после изменения `.env`:
-
-```bash
-./scripts/deploy-server.sh
-```
-
-Проверки при необходимости можно повторить отдельно:
-
-```bash
-make check
-make smoke
-```
-
-Откройте `MOODLE_URL` и войдите значениями `MOODLE_ADMIN_USER` и `MOODLE_ADMIN_PASSWORD` из `.env`.
-
-### Проверка учебного сценария
-
-1. Создайте quiz и вопрос CodeRunner типа `python3`.
-2. Отправьте ошибочное решение и убедитесь, что CodeRunner показал провал.
-3. Нажмите кнопку ИИ и проверьте все разделы анализа.
-4. Нажмите её повторно: должен вернуться кэшированный результат.
-5. Отправьте правильное решение и снова запустите анализ.
-6. Создайте скрытый тест с `Display`, отличным от `SHOW`, и проверьте страницу от роли студента.
-
-Проверьте обычный перезапуск:
-
-```bash
-make restart
-make check
-make smoke
-```
-
-Курс, вопросы, попытки, AI-кэш и модель должны сохраниться.
-
-### Автоматический скрипт
-
-Вместо ручного запуска можно выполнить:
-
-```bash
-./scripts/deploy-server.sh
-```
-
-Скрипт только проверяет Docker, Compose, `.env`, порт, память и диск, запускает Compose, ждёт сервисы и выполняет проверки. Он не устанавливает пакеты, не меняет firewall и не удаляет данные.
-
-### Обновление стенда
-
-Перед обновлением сделайте резервную копию базы и `moodledata`, затем:
-
-```bash
-git pull
-make build
-make up
-make check
-make smoke
-```
-
-Entrypoint выполняет Moodle CLI upgrade и не переустанавливает существующую базу.
-
-## Сценарий B: действующий Moodle СФТИ 5.2.1
-
-Не переносите контейнер Moodle, `config.php` или volumes лабораторного стенда в действующую систему. Обычно нужны:
-
-- собственный плагин `local_aicodehelper`;
-- AI service и Ollama;
-- настройки endpoint, timeout, режима и capability;
-- CodeRunner, behaviour и Jobe, только если их ещё нет или версии не подходят.
-
-Работу должен выполнять администратор Moodle. Сначала разверните копию production и проверьте всё на ней.
-
-### 1. Резервная копия и совместимость
-
-До изменений сохраните:
-
-- дамп базы Moodle;
-- весь `moodledata`;
-- текущий код Moodle и список установленных плагинов;
-- настройки CodeRunner и адрес Jobe.
-
-Проверьте:
-
-- Moodle строго 5.2.1;
-- PHP 8.3 с расширениями Moodle;
-- MariaDB поддерживаемой версии;
-- CodeRunner 5.9.2 и behaviour 1.4.5 либо подтверждённую администратором совместимую версию;
-- доступ от PHP-сервера к Jobe и будущему AI service.
-
-Версии стенда и официальные источники: [VERSIONS.md](VERSIONS.md).
-
-### 2. CodeRunner, behaviour и Jobe
-
-Если CodeRunner уже работает, не переустанавливайте его без причины. Создайте тестовый вопрос `python3` и подтвердите реальное выполнение через Jobe.
-
-Если плагинов нет, положите официальные выпуски до Moodle CLI upgrade:
+Ожидаемый вывод:
 
 ```text
-public/question/type/coderunner
-public/question/behaviour/adaptive_adapted_for_coderunner
+Hello from Jobe
 ```
 
-Behaviour — обязательная зависимость. Адрес Jobe задаётся без `http://`:
+Если CodeRunner ещё не настроен на существующий Jobe с портом `9000`, задайте его адрес без `http://`:
 
 ```bash
 sudo -u www-data php /var/www/moodle/admin/cli/cfg.php \
-  --component=qtype_coderunner --name=jobe_host --set=jobe.example.local:80
+  --component=qtype_coderunner --name=jobe_host \
+  --set=jobe.internal.example:9000
 ```
 
-Замените путь и DNS-имя на реальные. Не открывайте Jobe в интернет. Учтите настройки Moodle «Безопасность HTTP»: Moodle-сервер должен иметь разрешённый путь к Jobe.
+Замените путь Moodle и имя сервера на реальные. После изменения снова проверьте настоящее выполнение Python.
 
-### 3. AI service и Ollama
+## Запуск AI service и Ollama
 
-Их можно запустить отдельным Compose-проектом на внутреннем сервере. Скопируйте каталоги `ai-service`, настройки Ollama из `compose.yaml` и закреплённые переменные. Опубликуйте AI service только в доверенной серверной сети, Ollama наружу не открывайте.
+На Docker-сервере склонируйте репозиторий и создайте `.env`:
 
-С Moodle должен быть доступен полный серверный URL:
-
-```text
-http://ai-service.example.local:8000/api/v1/analyze
+```bash
+git clone https://github.com/Victor-git-19/moodle-ai-coderunner-lab.git
+cd moodle-ai-coderunner-lab
+./scripts/create-env.sh
 ```
 
-Проверьте `/health` с самого PHP-сервера. Адрес AI service никогда не должен передаваться браузеру студента.
+Для слабого сервера оставьте минимальную модель:
 
-### 4. Установка собственного плагина
+```dotenv
+OLLAMA_MODEL=qwen2.5-coder:0.5b
+```
 
-Все файлы собственного Moodle-плагина находятся в каталоге:
+Если Moodle установлен прямо на том же сервере, создайте рядом с `compose.yaml` файл `compose.institute.yaml`:
+
+```yaml
+services:
+  ai-service:
+    ports:
+      - "127.0.0.1:8000:8000"
+```
+
+Запустите только AI-часть. Контейнеры лабораторного Moodle, базы и Jobe при этом не запускаются:
+
+```bash
+docker compose -f compose.yaml -f compose.institute.yaml \
+  up -d --build ollama ollama-model ai-service
+```
+
+Проверьте сервис с Moodle-сервера:
+
+```bash
+curl -fsS http://127.0.0.1:8000/health
+```
+
+Ожидаемый ответ:
+
+```json
+{"status":"ok"}
+```
+
+Если AI service находится на другом сервере, публикуйте порт только на его внутреннем IP и разрешите доступ только от Moodle-сервера. Ollama наружу публиковать не нужно.
+
+## Копирование Moodle-плагина
+
+Все собственные файлы находятся в одном каталоге:
 
 ```text
 moodle/local_aicodehelper
 ```
 
-Скопируйте его на копию Moodle 5.2.1:
+Скопируйте каталог в `$CFG->dirroot/local/aicodehelper`. Для стандартного Moodle 5.2.1 с каталогом `public` команды выглядят так:
 
 ```bash
 sudo mkdir -p /var/www/moodle/public/local/aicodehelper
-sudo rsync -a --delete moodle/local_aicodehelper/ /var/www/moodle/public/local/aicodehelper/
+sudo rsync -a --delete moodle/local_aicodehelper/ \
+  /var/www/moodle/public/local/aicodehelper/
 sudo chown -R root:www-data /var/www/moodle/public/local/aicodehelper
 sudo -u www-data php /var/www/moodle/admin/cli/upgrade.php --non-interactive
 sudo -u www-data php /var/www/moodle/admin/cli/purge_caches.php
 ```
 
-Если в вашей установке нет каталога `public`, используйте фактический `$CFG->dirroot/local/aicodehelper`.
+Если `$CFG->dirroot` отличается, замените путь во всех командах. Не копируйте плагин в ядро Moodle или каталог CodeRunner.
 
-Главные файлы плагина:
+Основные файлы плагина:
 
-- `ajax.php` — защищённый запрос попытки;
-- `integration.js` — кнопка и отображение ответа;
-- `classes/payload_builder.php` — безопасный payload;
-- `classes/service_client.php` — серверный вызов AI;
-- `classes/output_renderer.php` — экранирование результата;
+- `classes/payload_builder.php` — собирает попытку и скрывает закрытые тесты;
+- `ajax.php` — проверяет пользователя, capability и `sesskey`;
+- `classes/service_client.php` — вызывает AI service с сервера Moodle;
+- `classes/output_renderer.php` — экранирует ответ;
+- `integration.js` — добавляет кнопку на страницу попытки;
 - `settings.php` — настройки администратора;
-- `db/` — capability, hook, кэш и upgrade;
+- `db/` — hook, capability, таблица кэша и обновления;
 - `lang/` — русские и английские строки.
 
-### 5. Настройки и capability
+## Настройка local_aicodehelper
 
-Откройте «Администрирование сайта → Плагины → Локальные плагины → ИИ-помощник по коду» и задайте:
+Откройте:
 
-- endpoint AI service;
-- timeout;
-- режим ответа;
-- лимит анализов;
-- запрет полного исправленного кода, если методика не требует иного.
+```text
+Администрирование сайта → Плагины → Локальные плагины → ИИ-помощник по коду
+```
 
-То же через CLI:
+Рекомендуемые настройки:
+
+- интеграция с CodeRunner включена;
+- кнопка показывается после проверки;
+- режим ответа — преподавательский анализ;
+- полный готовый код запрещён;
+- лимит — 3 анализа на один шаг попытки;
+- timeout — 60 секунд;
+- endpoint — `http://127.0.0.1:8000/api/v1/analyze` для установки на одном сервере.
+
+Endpoint можно задать через CLI:
 
 ```bash
 sudo -u www-data php /var/www/moodle/admin/cli/cfg.php \
   --component=local_aicodehelper --name=endpoint \
-  --set=http://ai-service.example.local:8000/api/v1/analyze
+  --set=http://127.0.0.1:8000/api/v1/analyze
 sudo -u www-data php /var/www/moodle/admin/cli/cfg.php \
   --component=local_aicodehelper --name=timeout --set=60
+sudo -u www-data php /var/www/moodle/admin/cli/cfg.php \
+  --component=local_aicodehelper --name=allowfullsolution --set=0
 sudo -u www-data php /var/www/moodle/admin/cli/purge_caches.php
 ```
 
-Выдайте роли студента capability `local/aicodehelper:analyzeattempt` только в нужном контексте.
+Capability `local/aicodehelper:analyzeattempt` по умолчанию разрешена студенту, преподавателю и менеджеру. Проверьте её в ролях Moodle и при необходимости ограничьте на уровне курса или теста.
 
-### 6. Проверка перед production
+## Проверка интеграции
 
-На копии Moodle:
+Проверяйте с ролью студента, а не только администратора:
 
-1. Откройте `/local/aicodehelper/index.php` и проверьте диагностику.
-2. Создайте отдельный quiz CodeRunner.
-3. Проверьте ошибочную и правильную попытки.
-4. Проверьте повторный запрос из кэша.
-5. Проверьте SyntaxError, RuntimeError и timeout.
-6. В скрытом тесте выключите `Use as example`, установите `Display` не `SHOW` и войдите как студент.
-7. Убедитесь, что вход, ожидаемый ответ, test code и эталонное решение не видны и не попадают в AI payload или логи.
-8. Временно остановите Ollama и проверьте fallback.
+1. Отправьте правильное решение CodeRunner и проверьте оценку.
+2. Отправьте `SyntaxError` или неправильный ответ.
+3. Нажмите «Проанализировать решение с помощью ИИ».
+4. Убедитесь, что результат появился под обратной связью CodeRunner.
+5. Проверьте скрытый тест: студент не должен видеть его вход, ожидаемый ответ и test code.
+6. Временно остановите Ollama и убедитесь, что отображается статический fallback.
+7. Снова запустите Ollama и повторите анализ.
 
-Только после этого повторите установку на production в согласованное окно.
+Полезные команды:
 
-### 7. Откат
+```bash
+docker compose -f compose.yaml -f compose.institute.yaml ps
+docker compose -f compose.yaml -f compose.institute.yaml logs -f ai-service ollama
+curl -fsS http://127.0.0.1:8000/health
+```
 
-Если проверка не прошла:
+## Повторная установка или обновление
 
-1. отключите интеграцию `local_aicodehelper` в настройках;
-2. верните предыдущий код плагина или удалите новый каталог по процедуре администратора;
-3. выполните CLI upgrade и purge caches;
-4. восстановите базу и `moodledata` из согласованной резервной копии, если миграция уже затронула production;
-5. верните старые настройки CodeRunner/Jobe;
-6. изучите логи Moodle, PHP, AI service и Ollama.
+На другом Moodle 5.2.1 повторно скопируйте весь каталог `moodle/local_aicodehelper`, затем выполните:
 
-Перенос на живой Moodle не является операцией одной команды: пути, сеть, роли и политика скрытых тестов различаются между установками.
+```bash
+sudo -u www-data php /var/www/moodle/admin/cli/upgrade.php --non-interactive
+sudo -u www-data php /var/www/moodle/admin/cli/purge_caches.php
+```
+
+После обновления ещё раз проверьте endpoint, capability, скрытые тесты и ошибочную попытку CodeRunner.
+
+Если появилась проблема, сначала отключите интеграцию в настройках `local_aicodehelper`. Не удаляйте базу, `moodledata` или Docker volumes без резервной копии и отдельного согласования.
