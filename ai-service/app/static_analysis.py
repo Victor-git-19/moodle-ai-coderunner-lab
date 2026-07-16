@@ -1,6 +1,7 @@
 """Безопасный статический анализ Python через стандартный модуль ast."""
 
 import ast
+import re
 from typing import Any, Literal
 
 from .response_builder import response_data
@@ -176,6 +177,100 @@ def estimate_complexity(nodes: list[ast.AST]) -> dict[str, str]:
     }
 
 
+def structural_requirements(task: str) -> dict[str, Any]:
+    """Извлечь из условия явно указанную функцию, корутину, класс и API."""
+
+    async_match = re.search(r"\basync\s+def\s+([A-Za-z_]\w*)", task)
+    function_match = re.search(r"(?<!async\s)\bdef\s+([A-Za-z_]\w*)", task)
+    class_match = re.search(r"(?:класс|class)\s+([A-Za-z_]\w*)", task, re.IGNORECASE)
+    workers_match = re.search(r"max_workers\s*=\s*(\d+)", task)
+    known_apis = ("asyncio.gather", "ThreadPoolExecutor", "ProcessPoolExecutor")
+    return {
+        "async_function": async_match.group(1) if async_match else None,
+        "function": function_match.group(1) if function_match else None,
+        "class": class_match.group(1) if class_match else None,
+        "apis": [name for name in known_apis if name.lower() in task.lower()],
+        "max_workers": int(workers_match.group(1)) if workers_match else None,
+        "float": bool(re.search(r"веществен|\bfloat\b|погрешност", task, re.IGNORECASE)),
+    }
+
+
+def structural_issues(
+    nodes: list[ast.AST],
+    requirements: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Проверить обязательную структуру задания, не запуская код студента."""
+
+    issues: list[dict[str, Any]] = []
+    functions = {
+        node.name: node
+        for node in nodes
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    classes = {node.name: node for node in nodes if isinstance(node, ast.ClassDef)}
+    names = {
+        node.id for node in nodes if isinstance(node, ast.Name)
+    } | {
+        node.attr for node in nodes if isinstance(node, ast.Attribute)
+    }
+
+    function_name = requirements["function"]
+    if function_name and function_name not in functions:
+        issues.append(make_issue(
+            "error",
+            "Требуется функция",
+            f"В условии требуется функция {function_name}, объявленная через def.",
+            f"Объявите def {function_name}(...) и верните результат через return.",
+        ))
+
+    async_name = requirements["async_function"]
+    async_node = functions.get(async_name) if async_name else None
+    if async_name and not isinstance(async_node, ast.AsyncFunctionDef):
+        issues.append(make_issue(
+            "error",
+            "Требуется корутина",
+            f"В условии требуется корутина {async_name}, объявленная через async def.",
+            f"Объявите async def {async_name}(...) и верните результат.",
+        ))
+
+    class_name = requirements["class"]
+    if class_name and class_name not in classes:
+        issues.append(make_issue(
+            "error",
+            "Требуется класс",
+            f"В условии требуется класс {class_name}, но его объявление не найдено.",
+            f"Объявите class {class_name} и добавьте методы из условия.",
+        ))
+
+    for api_name in requirements["apis"]:
+        short_name = api_name.rsplit(".", 1)[-1]
+        if short_name not in names:
+            issues.append(make_issue(
+                "error",
+                "Не использован обязательный API",
+                f"Условие требует использовать {api_name}, но такого обращения в коде не найдено.",
+                f"Организуйте вычисления через {api_name}, как указано в условии.",
+            ))
+    required_workers = requirements["max_workers"]
+    has_worker_limit = any(
+        isinstance(node, ast.Call) and any(
+            keyword.arg == "max_workers"
+            and isinstance(keyword.value, ast.Constant)
+            and keyword.value.value == required_workers
+            for keyword in node.keywords
+        )
+        for node in nodes
+    )
+    if required_workers is not None and not has_worker_limit:
+        issues.append(make_issue(
+            "error",
+            "Не ограничено число работников",
+            f"Условие требует max_workers={required_workers}, чтобы не перегружать учебный сервер.",
+            f"Передайте max_workers={required_workers} при создании исполнителя.",
+        ))
+    return issues
+
+
 def analyze_python(request: AnalyzeRequest) -> dict[str, Any]:
     """Разобрать Python-код и оценить его структуру без выполнения."""
 
@@ -187,10 +282,12 @@ def analyze_python(request: AnalyzeRequest) -> dict[str, Any]:
     # Один плоский список узлов упрощает последующие небольшие проверки.
     nodes = list(ast.walk(tree))
     functions = [node.name for node in nodes if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    classes = [node.name for node in nodes if isinstance(node, ast.ClassDef)]
     calls = [node.func.id for node in nodes if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)]
+    requirements = structural_requirements(request.task)
 
     strengths: list[str] = []
-    issues: list[dict[str, Any]] = []
+    issues = structural_issues(nodes, requirements)
     style: list[str] = []
     if "input" in calls:
         strengths.append("Решение читает пользовательский ввод, а не использует только фиксированные данные.")
@@ -198,6 +295,8 @@ def analyze_python(request: AnalyzeRequest) -> dict[str, Any]:
         strengths.append("Решение формирует вывод программы.")
     if functions:
         strengths.append("Логика разделена на функции: " + ", ".join(functions[:4]) + ".")
+    if classes:
+        strengths.append("Объявлены классы: " + ", ".join(classes[:3]) + ".")
     if not strengths:
         strengths.append("Код успешно прошёл синтаксический разбор.")
     if any(isinstance(node, ast.ExceptHandler) and node.type is None for node in nodes):
@@ -217,12 +316,20 @@ def analyze_python(request: AnalyzeRequest) -> dict[str, Any]:
     if len(request.code.splitlines()) > 40 and not functions:
         style.append("Длинный линейный фрагмент стоит разделить на небольшие функции.")
 
+    edge_cases = ["Пустой или минимальный ввод", "Отрицательные числа", "Повторяющиеся значения"]
+    if requirements["float"]:
+        edge_cases = [
+            "Нулевые и отрицательные вещественные значения, если они разрешены",
+            "Очень маленькие и большие значения",
+            "Погрешность вычислений с float без лишнего округления",
+        ]
+
     return response_data(
         verdict=attempt_verdict(request, issues),
         strengths=strengths,
         issues=issues,
         failed_test_analysis=failed_test_analysis(request),
-        edge_cases=["Пустой или минимальный ввод", "Отрицательные числа", "Повторяющиеся значения"],
+        edge_cases=edge_cases,
         complexity=estimate_complexity(nodes),
         style=style,
         hardcode_warnings=hardcode_warnings(nodes, request),

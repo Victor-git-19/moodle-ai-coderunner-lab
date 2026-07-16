@@ -11,7 +11,7 @@ HTML,
         'name' => 'Как проходить курс',
         'content' => <<<'HTML'
 <h3>Как устроено обучение</h3>
-<p>В курсе пять тем. Сначала прочитайте страницу с теорией, затем откройте практику и решите три задачи. Решение должно читать данные из стандартного ввода и печатать только требуемый результат.</p>
+<p>В курсе восемь тем. Сначала прочитайте страницу с теорией, затем откройте практику и решите три задачи. В первых темах нужно написать программу, а в следующих — объявить указанную функцию или класс.</p>
 <ol>
   <li>Разберите примеры и ограничения задачи.</li>
   <li>Напишите программу в поле ответа.</li>
@@ -325,20 +325,14 @@ PY,
         ],
         [
             'name' => '5. Простые алгоритмы',
-            'summary' => 'Разбиение решения на шаги, функции, делители и словари частот.',
+            'summary' => 'Разбиение решения на шаги, делители, оценка сложности и словари частот.',
             'theory' => [
-                'name' => 'Теория: алгоритм и функция',
+                'name' => 'Теория: простые алгоритмы',
                 'content' => <<<'HTML'
 <h3>Сначала алгоритм</h3>
 <p>До кода сформулируйте последовательность действий и определите, какие данные нужно хранить. Хороший алгоритм обрабатывает весь допустимый диапазон, а не только примеры.</p>
-<h3>Функции</h3>
-<p>Функция именует отдельную операцию и возвращает результат:</p>
-<pre><code>def is_even(number):
-    return number % 2 == 0
-
-value = int(input())
-print(is_even(value))</code></pre>
-<p>Понятные имена и небольшие функции упрощают проверку. Для подсчёта частот удобно использовать словарь: ключом будет значение, а значением — число его появлений.</p>
+<h3>Выбор структуры данных</h3>
+<p>Для подсчёта частот удобно использовать словарь: ключом будет значение, а значением — число его появлений. Для поиска делителей часто достаточно проверять числа только до квадратного корня.</p>
 <h3>Проверка решения</h3>
 <ul>
   <li>пройдите алгоритм вручную на обычном примере;</li>
@@ -351,7 +345,7 @@ HTML,
             ],
             'quiz' => [
                 'name' => 'Практика 5: итоговые алгоритмы',
-                'intro' => 'Итоговая практика: примените циклы, условия, функции и коллекции в одном решении.',
+                'intro' => 'Итоговая практика: примените циклы, условия и коллекции в одном решении.',
             ],
             'tasks' => [
                 [
@@ -414,6 +408,377 @@ PY,
                         ['stdin' => "Cat dog cat bird\n", 'expected' => "cat\n", 'visible' => true],
                         ['stdin' => "pear Apple pear apple\n", 'expected' => "apple\n", 'visible' => true],
                         ['stdin' => "\n", 'expected' => "EMPTY\n", 'visible' => false],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'name' => '6. Функции и вещественные числа',
+            'summary' => 'Объявление функций, возврат результата и корректная работа с вещественными числами.',
+            'theory' => [
+                'name' => 'Теория: функции и точность вычислений',
+                'content' => <<<'HTML'
+<h3>Функция как часть программы</h3>
+<p>Функция получает аргументы, выполняет одну понятную операцию и возвращает результат:</p>
+<pre><code>def rectangle_area(width, height):
+    return width * height</code></pre>
+<p>В заданиях этого раздела CodeRunner сам вызывает функцию. Поэтому не нужно читать <code>input()</code> и печатать ответ. Нужно объявить функцию через <code>def</code> с точным именем из условия и вернуть значение через <code>return</code>.</p>
+<h3>Вещественные числа</h3>
+<p>Числа типа <code>float</code> хранятся с конечной точностью. Например, результат некоторых вычислений может отличаться от математического значения на очень малую величину. Тесты курса сравнивают такие результаты с допустимой погрешностью.</p>
+<p>Проверяйте ноль, отрицательные значения, дробные аргументы и числа разного масштаба. Не округляйте результат без требования условия.</p>
+HTML,
+            ],
+            'quiz' => [
+                'name' => 'Практика 6: функции и float',
+                'intro' => 'Объявите функции с указанными именами. CodeRunner вызовет их с целыми и вещественными аргументами.',
+            ],
+            'tasks' => [
+                [
+                    'name' => '16. Площадь круга',
+                    'mode' => 'function',
+                    'required_function' => 'circle_area',
+                    'description' => 'Объявите функцию circle_area(radius), которая возвращает площадь круга.',
+                    'input' => 'Аргумент radius — неотрицательное число.',
+                    'output' => 'Вещественное число math.pi * radius ** 2.',
+                    'answer' => <<<'PY'
+import math
+
+def circle_area(radius):
+    return math.pi * radius ** 2
+PY,
+                    'invalid_answer' => "import math\nprint(math.pi * 4)",
+                    'tests' => [
+                        [
+                            'testcode' => "import math\nprint(math.isclose(circle_area(2.0), 4.0 * math.pi, rel_tol=1e-9, abs_tol=1e-9))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => true,
+                        ],
+                        [
+                            'testcode' => "import math\nprint(math.isclose(circle_area(0.5), 0.25 * math.pi, rel_tol=1e-9, abs_tol=1e-9))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => true,
+                        ],
+                        [
+                            'testcode' => "import math\nprint(math.isclose(circle_area(0.0), 0.0, rel_tol=1e-9, abs_tol=1e-9))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => false,
+                        ],
+                    ],
+                ],
+                [
+                    'name' => '17. Среднее значение',
+                    'mode' => 'function',
+                    'required_function' => 'average',
+                    'description' => 'Объявите функцию average(values), которая возвращает среднее арифметическое непустого списка.',
+                    'input' => 'Аргумент values — непустой список целых или вещественных чисел.',
+                    'output' => 'Среднее арифметическое элементов без лишнего округления.',
+                    'answer' => <<<'PY'
+def average(values):
+    return sum(values) / len(values)
+PY,
+                    'tests' => [
+                        [
+                            'testcode' => "import math\nprint(math.isclose(average([2, 4, 9]), 5.0, rel_tol=1e-9, abs_tol=1e-9))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => true,
+                        ],
+                        [
+                            'testcode' => "import math\nprint(math.isclose(average([-1.5, 0.5, 4.0]), 1.0, rel_tol=1e-9, abs_tol=1e-9))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => true,
+                        ],
+                        [
+                            'testcode' => "import math\nprint(math.isclose(average([0.1, 0.2]), 0.15, rel_tol=1e-9, abs_tol=1e-9))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => false,
+                        ],
+                    ],
+                ],
+                [
+                    'name' => '18. Линейное уравнение',
+                    'mode' => 'function',
+                    'required_function' => 'solve_linear',
+                    'description' => 'Объявите функцию solve_linear(a, b), которая решает уравнение a * x + b = 0.',
+                    'input' => 'Аргументы a и b — целые или вещественные числа, a не равно нулю.',
+                    'output' => 'Вещественный корень уравнения.',
+                    'answer' => <<<'PY'
+def solve_linear(a, b):
+    return -b / a
+PY,
+                    'tests' => [
+                        [
+                            'testcode' => "import math\nprint(math.isclose(solve_linear(2, -5), 2.5, rel_tol=1e-9, abs_tol=1e-9))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => true,
+                        ],
+                        [
+                            'testcode' => "import math\nprint(math.isclose(solve_linear(-0.5, 2), 4.0, rel_tol=1e-9, abs_tol=1e-9))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => true,
+                        ],
+                        [
+                            'testcode' => "import math\nprint(math.isclose(solve_linear(1e-6, 3e-6), -3.0, rel_tol=1e-9, abs_tol=1e-9))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => false,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'name' => '7. Классы',
+            'summary' => 'Состояние объекта, конструктор, методы и совместная работа нескольких операций.',
+            'theory' => [
+                'name' => 'Теория: классы и объекты',
+                'content' => <<<'HTML'
+<h3>Описание объекта</h3>
+<p>Класс объединяет данные и операции над ними:</p>
+<pre><code>class Rectangle:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+
+    def area(self):
+        return self.width * self.height</code></pre>
+<p><code>__init__</code> задаёт начальное состояние. Первый аргумент метода — <code>self</code>, через него метод обращается к полям конкретного объекта.</p>
+<p>В заданиях CodeRunner создаёт объекты и вызывает их методы. Не добавляйте <code>input()</code> и демонстрационный вывод. Объявите только требуемый класс и его методы.</p>
+HTML,
+            ],
+            'quiz' => [
+                'name' => 'Практика 7: классы',
+                'intro' => 'Реализуйте три небольших класса. Тесты проверяют создание объектов, изменение состояния и вещественные значения.',
+            ],
+            'tasks' => [
+                [
+                    'name' => '19. Прямоугольник как объект',
+                    'mode' => 'class',
+                    'required_class' => 'Rectangle',
+                    'description' => 'Объявите класс Rectangle(width, height) с методами area() и perimeter().',
+                    'input' => 'Ширина и высота передаются конструктору и могут быть вещественными.',
+                    'output' => 'area() возвращает площадь, perimeter() — периметр.',
+                    'answer' => <<<'PY'
+class Rectangle:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+
+    def area(self):
+        return self.width * self.height
+
+    def perimeter(self):
+        return 2 * (self.width + self.height)
+PY,
+                    'tests' => [
+                        [
+                            'testcode' => "import math\nshape = Rectangle(3, 5)\nprint(math.isclose(shape.area(), 15.0) and math.isclose(shape.perimeter(), 16.0))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => true,
+                        ],
+                        [
+                            'testcode' => "import math\nshape = Rectangle(2.5, 0.4)\nprint(math.isclose(shape.area(), 1.0) and math.isclose(shape.perimeter(), 5.8))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => true,
+                        ],
+                        [
+                            'testcode' => "import math\nshape = Rectangle(0.0, 7.25)\nprint(math.isclose(shape.area(), 0.0) and math.isclose(shape.perimeter(), 14.5))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => false,
+                        ],
+                    ],
+                ],
+                [
+                    'name' => '20. Банковский счёт',
+                    'mode' => 'class',
+                    'required_class' => 'BankAccount',
+                    'description' => 'Объявите класс BankAccount(balance=0). Методы deposit(amount) и withdraw(amount) изменяют баланс. withdraw возвращает False и не меняет баланс, если денег недостаточно; иначе возвращает True.',
+                    'input' => 'Начальный баланс и суммы операций — неотрицательные числа.',
+                    'output' => 'Текущий баланс хранится в поле balance.',
+                    'answer' => <<<'PY'
+class BankAccount:
+    def __init__(self, balance=0):
+        self.balance = balance
+
+    def deposit(self, amount):
+        self.balance += amount
+
+    def withdraw(self, amount):
+        if amount > self.balance:
+            return False
+        self.balance -= amount
+        return True
+PY,
+                    'tests' => [
+                        [
+                            'testcode' => "import math\naccount = BankAccount(100.0)\naccount.deposit(25.5)\nresult = account.withdraw(20.25)\nprint(result is True and math.isclose(account.balance, 105.25))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => true,
+                        ],
+                        [
+                            'testcode' => "import math\naccount = BankAccount(10)\nresult = account.withdraw(11)\nprint(result is False and math.isclose(account.balance, 10.0))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => true,
+                        ],
+                        [
+                            'testcode' => "import math\naccount = BankAccount()\naccount.deposit(0.1)\naccount.deposit(0.2)\nprint(math.isclose(account.balance, 0.3, rel_tol=1e-9, abs_tol=1e-9))",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => false,
+                        ],
+                    ],
+                ],
+                [
+                    'name' => '21. Результаты студента',
+                    'mode' => 'class',
+                    'required_class' => 'Student',
+                    'description' => 'Объявите класс Student(name). Метод add_grade(grade) добавляет оценку, average() возвращает среднее или 0.0 без оценок, is_passed() возвращает True при среднем не ниже 3.0.',
+                    'input' => 'Имя передаётся конструктору, оценки добавляются по одной.',
+                    'output' => 'Методы возвращают среднее значение и итоговый логический результат.',
+                    'answer' => <<<'PY'
+class Student:
+    def __init__(self, name):
+        self.name = name
+        self.grades = []
+
+    def add_grade(self, grade):
+        self.grades.append(grade)
+
+    def average(self):
+        if not self.grades:
+            return 0.0
+        return sum(self.grades) / len(self.grades)
+
+    def is_passed(self):
+        return self.average() >= 3.0
+PY,
+                    'tests' => [
+                        [
+                            'testcode' => "import math\nstudent = Student('Анна')\nstudent.add_grade(5)\nstudent.add_grade(4)\nprint(math.isclose(student.average(), 4.5) and student.is_passed() is True)",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => true,
+                        ],
+                        [
+                            'testcode' => "import math\nstudent = Student('Иван')\nstudent.add_grade(2.5)\nstudent.add_grade(3.0)\nprint(math.isclose(student.average(), 2.75) and student.is_passed() is False)",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => true,
+                        ],
+                        [
+                            'testcode' => "import math\nstudent = Student('Нет оценок')\nprint(math.isclose(student.average(), 0.0) and student.is_passed() is False)",
+                            'stdin' => '',
+                            'expected' => "True\n",
+                            'visible' => false,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'name' => '8. Параллельное и асинхронное выполнение',
+            'summary' => 'Базовое применение asyncio, потоков и процессов на небольших безопасных примерах.',
+            'theory' => [
+                'name' => 'Теория: asyncio, потоки и процессы',
+                'content' => <<<'HTML'
+<h3>Три способа организовать работу</h3>
+<ul>
+  <li><code>asyncio</code> переключает корутины, пока одна из них ожидает ввод-вывод;</li>
+  <li><code>ThreadPoolExecutor</code> удобен для нескольких блокирующих операций ввода-вывода;</li>
+  <li><code>ProcessPoolExecutor</code> выполняет вычисления в отдельных процессах и подходит для независимых тяжёлых расчётов.</li>
+</ul>
+<p>Параллельность не всегда ускоряет программу: создание задач и исполнителей тоже требует времени. В учебных заданиях входы специально небольшие, а число рабочих потоков и процессов ограничено двумя.</p>
+<h3>Безопасные правила</h3>
+<p>Создавайте исполнитель через <code>with</code>, задавайте <code>max_workers=2</code> и возвращайте результаты в исходном порядке. В задании с <code>asyncio</code> объявите корутину через <code>async def</code> и объедините задачи функцией <code>asyncio.gather</code>.</p>
+HTML,
+            ],
+            'quiz' => [
+                'name' => 'Практика 8: параллельное выполнение',
+                'intro' => 'Небольшие задания знакомят с тремя стандартными API Python. Лимиты подобраны для учебного сервера.',
+            ],
+            'tasks' => [
+                [
+                    'name' => '22. Асинхронная сумма квадратов',
+                    'mode' => 'function',
+                    'required_async_function' => 'async_square_sum',
+                    'required_symbols' => ['gather'],
+                    'description' => 'Объявите корутину async_square_sum(values). Для каждого числа создайте асинхронное вычисление квадрата, запустите их через asyncio.gather и верните сумму результатов.',
+                    'input' => 'Аргумент values — список целых чисел.',
+                    'output' => 'Целая сумма квадратов.',
+                    'answer' => <<<'PY'
+import asyncio
+
+async def square(number):
+    await asyncio.sleep(0)
+    return number * number
+
+async def async_square_sum(values):
+    squares = await asyncio.gather(*(square(number) for number in values))
+    return sum(squares)
+PY,
+                    'tests' => [
+                        ['testcode' => "import asyncio\nprint(asyncio.run(async_square_sum([1, 2, 3])))", 'stdin' => '', 'expected' => "14\n", 'visible' => true],
+                        ['testcode' => "import asyncio\nprint(asyncio.run(async_square_sum([])))", 'stdin' => '', 'expected' => "0\n", 'visible' => true],
+                        ['testcode' => "import asyncio\nprint(asyncio.run(async_square_sum([-4, 5])))", 'stdin' => '', 'expected' => "41\n", 'visible' => false],
+                    ],
+                ],
+                [
+                    'name' => '23. Длины строк в потоках',
+                    'mode' => 'function',
+                    'required_function' => 'parallel_lengths',
+                    'required_symbols' => ['ThreadPoolExecutor'],
+                    'max_workers' => 2,
+                    'description' => 'Объявите функцию parallel_lengths(items), которая вычисляет длины строк через ThreadPoolExecutor с max_workers=2 и возвращает список в исходном порядке.',
+                    'input' => 'Аргумент items — список строк.',
+                    'output' => 'Список длин строк.',
+                    'answer' => <<<'PY'
+from concurrent.futures import ThreadPoolExecutor
+
+def parallel_lengths(items):
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        return list(executor.map(len, items))
+PY,
+                    'tests' => [
+                        ['testcode' => "print(parallel_lengths(['cat', '', 'python']))", 'stdin' => '', 'expected' => "[3, 0, 6]\n", 'visible' => true],
+                        ['testcode' => "print(parallel_lengths([]))", 'stdin' => '', 'expected' => "[]\n", 'visible' => true],
+                        ['testcode' => "print(parallel_lengths(['а', 'курс', 'CodeRunner']))", 'stdin' => '', 'expected' => "[1, 4, 10]\n", 'visible' => false],
+                    ],
+                ],
+                [
+                    'name' => '24. Факториалы в процессах',
+                    'mode' => 'function',
+                    'required_function' => 'parallel_factorials',
+                    'required_symbols' => ['ProcessPoolExecutor'],
+                    'max_workers' => 2,
+                    'description' => 'Объявите функцию parallel_factorials(values), которая вычисляет факториалы через ProcessPoolExecutor с max_workers=2 и возвращает список в исходном порядке.',
+                    'input' => 'Аргумент values — список целых чисел от 0 до 20.',
+                    'output' => 'Список факториалов.',
+                    'cputime' => 5,
+                    'memory' => 256,
+                    'answer' => <<<'PY'
+import math
+from concurrent.futures import ProcessPoolExecutor
+
+def parallel_factorials(values):
+    with ProcessPoolExecutor(max_workers=2) as executor:
+        return list(executor.map(math.factorial, values))
+PY,
+                    'tests' => [
+                        ['testcode' => "print(parallel_factorials([0, 3, 5]))", 'stdin' => '', 'expected' => "[1, 6, 120]\n", 'visible' => true],
+                        ['testcode' => "print(parallel_factorials([]))", 'stdin' => '', 'expected' => "[]\n", 'visible' => true],
+                        ['testcode' => "print(parallel_factorials([6, 1, 8]))", 'stdin' => '', 'expected' => "[720, 1, 40320]\n", 'visible' => false],
                     ],
                 ],
             ],

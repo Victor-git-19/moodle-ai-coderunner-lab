@@ -58,6 +58,7 @@ foreach ($questions as $record) {
         throw new RuntimeException('Unexpected CodeRunner question: ' . $record->name);
     }
 
+    $task = $expectedtasks[$record->name];
     $question = question_bank::load_question($record->id);
     if (
         $question->coderunnertype !== 'python3' ||
@@ -66,6 +67,10 @@ foreach ($questions as $record) {
     ) {
         throw new RuntimeException('Incorrect CodeRunner settings: ' . $record->name);
     }
+    $expectedcombinator = ($task['mode'] ?? 'program') === 'program' ? 0 : 1;
+    if ((int) $question->iscombinatortemplate !== $expectedcombinator) {
+        throw new RuntimeException('Incorrect CodeRunner test mode: ' . $record->name);
+    }
     if (count($question->testcases) !== 3) {
         throw new RuntimeException('Each task must have exactly three tests: ' . $record->name);
     }
@@ -73,6 +78,9 @@ foreach ($questions as $record) {
     $visible = 0;
     $hidden = 0;
     foreach ($question->testcases as $testcase) {
+        if (($task['mode'] ?? 'program') !== 'program' && trim((string) $testcase->testcode) === '') {
+            throw new RuntimeException('Function or class test has no test code: ' . $record->name);
+        }
         if ($testcase->display === 'SHOW' && (int) $testcase->useasexample === 1) {
             $visible++;
         } else if ($testcase->display === 'HIDE' && (int) $testcase->useasexample === 0) {
@@ -91,6 +99,17 @@ foreach ($questions as $record) {
             throw new RuntimeException('Reference answer failed Jobe tests: ' . $record->name);
         }
         echo "Reference answer: OK — {$record->name}\n";
+
+        if (isset($task['invalid_answer'])) {
+            // Эта проверка воспроизводит замечание преподавателя: вывод без def не должен пройти.
+            $invalidquestion = question_bank::load_question($record->id);
+            $invalidquestion->start_attempt(null);
+            [$invalidfraction] = $invalidquestion->grade_response(['answer' => $task['invalid_answer']]);
+            if ((float) $invalidfraction === 1.0) {
+                throw new RuntimeException('Answer without required def was accepted: ' . $record->name);
+            }
+            echo "Required definition: OK — {$record->name}\n";
+        }
     }
 }
 

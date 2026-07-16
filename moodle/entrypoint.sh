@@ -98,7 +98,7 @@ runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" \
     --component=local_aicodehelper --name=timeout --set="${AI_TIMEOUT:-60}"
 
 echo "Checking the demo Python course..."
-# Установщик сам проверяет shortname и не создаёт второй экземпляр курса.
+# Установщик находит курс по shortname, добавляет недостающее и не создаёт копию.
 runuser -u www-data -- env MOODLE_CONFIG="$CONFIG_FILE" \
     php /opt/python-course/install.php
 

@@ -174,4 +174,4 @@ exit($DB->record_exists("config_plugins", ["plugin" => "local_aicodehelper"]) ? 
 echo "local_aicodehelper plugin: OK"
 
 docker compose exec -T moodle php /opt/python-course/check.php --run-reference >/dev/null
-echo "Python course (15 reference solutions): OK"
+echo "Python course (24 references and required def): OK"

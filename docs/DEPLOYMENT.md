@@ -11,7 +11,7 @@
 | `moodle/local_aicodehelper/` | целиком в `$CFG->dirroot/local/aicodehelper/`; это собственный Moodle-плагин |
 | `ai-service/` и Docker-файлы проекта | остаются в клонированном репозитории и запускаются через Compose |
 | Ollama | запускается рядом с AI service; модель хранится в Docker volume |
-| `course/` | необязательно: установщик создаёт отдельный курс с 15 задачами CodeRunner |
+| `course/` | необязательно: установщик создаёт отдельный курс с 24 задачами CodeRunner |
 
 Не переносите из лаборатории:
 
@@ -247,7 +247,7 @@ sudo -u www-data php "$MOODLE_CLI/purge_caches.php"
 
 ## 6. Необязательно: установить курс Python
 
-Установщик создаёт отдельный курс `PYTHON-CR-START`. Существующие курсы он не меняет.
+Установщик создаёт отдельный курс `PYTHON-CR-START`. Другие курсы он не меняет. Если этот курс уже создан проектом, установщик дополнит его недостающими разделами и вопросами без удаления пользователей и попыток.
 
 ```bash
 cd "$REPO"
@@ -264,14 +264,14 @@ sudo -u www-data env \
   php course/install.php
 ```
 
-Проверьте все 15 эталонных решений через существующий Jobe:
+Проверьте все 24 эталонных решения через существующий Jobe:
 
 ```bash
 sudo -u www-data env MOODLE_CONFIG="$MOODLE_CONFIG" \
   php course/check.php --run-reference
 ```
 
-Повторный запуск установщика не создаёт копию курса и не перезаписывает его.
+Повторный запуск не создаёт копию курса. Он синхронизирует страницы проекта и добавляет отсутствующие разделы, тесты и вопросы. Существующие вопросы и попытки не удаляются. Если страницы курса меняли вручную, сначала проверьте обновление на копии Moodle.
 
 ## 7. Итоговая проверка
 
@@ -304,7 +304,24 @@ docker compose -f compose.yaml -f compose.institute.yaml \
 3. Повторите `rsync` каталога `moodle/local_aicodehelper/`.
 4. Запустите `upgrade.php` и `purge_caches.php`.
 5. Пересоберите только `ollama`, `ollama-model` и `ai-service`.
-6. Повторите проверку от роли студента.
+6. Если используется учебный курс, снова запустите `course/install.php`, затем `course/check.php --run-reference`.
+7. Повторите проверку от роли студента.
+
+Команды для пункта 5:
+
+```bash
+cd "$REPO"
+docker compose -f compose.yaml -f compose.institute.yaml \
+  up -d --build ollama ollama-model ai-service
+```
+
+Команды для пункта 6:
+
+```bash
+sudo -u www-data env MOODLE_CONFIG="$MOODLE_CONFIG" php course/install.php
+sudo -u www-data env MOODLE_CONFIG="$MOODLE_CONFIG" \
+  php course/check.php --run-reference
+```
 
 Для быстрого отключения интеграции:
 

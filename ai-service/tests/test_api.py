@@ -81,6 +81,57 @@ def test_memory_limit(monkeypatch) -> None:
     assert "памяти" in body["verdict"]
 
 
+def test_missing_required_function_is_reported(monkeypatch) -> None:
+    body = analyze(
+        monkeypatch,
+        task="Обязательно объявите функцию с помощью def circle_area(...).",
+        code="import math\nprint(math.pi * 4)",
+        failed_tests=3,
+    ).json()
+    assert any(issue["title"] == "Требуется функция" for issue in body["issues"])
+
+
+def test_required_class_is_checked(monkeypatch) -> None:
+    body = analyze(
+        monkeypatch,
+        task="Обязательно объявите класс Rectangle.",
+        code="def area(width, height):\n    return width * height",
+    ).json()
+    assert any(issue["title"] == "Требуется класс" for issue in body["issues"])
+
+
+def test_parallel_api_is_checked(monkeypatch) -> None:
+    body = analyze(
+        monkeypatch,
+        task="Объявите def parallel_lengths(...). Используйте ThreadPoolExecutor.",
+        code="def parallel_lengths(items):\n    return list(map(len, items))",
+    ).json()
+    assert any(issue["title"] == "Не использован обязательный API" for issue in body["issues"])
+
+
+def test_parallel_worker_limit_is_checked(monkeypatch) -> None:
+    body = analyze(
+        monkeypatch,
+        task="Используйте ThreadPoolExecutor с max_workers=2 в def parallel_lengths(...).",
+        code=(
+            "from concurrent.futures import ThreadPoolExecutor\n"
+            "def parallel_lengths(items):\n"
+            "    with ThreadPoolExecutor() as executor:\n"
+            "        return list(executor.map(len, items))"
+        ),
+    ).json()
+    assert any(issue["title"] == "Не ограничено число работников" for issue in body["issues"])
+
+
+def test_float_task_gets_precision_edge_cases(monkeypatch) -> None:
+    body = analyze(
+        monkeypatch,
+        task="Верните вещественный результат через def average(...).",
+        code="def average(values):\n    return sum(values) / len(values)",
+    ).json()
+    assert any("погреш" in item.lower() for item in body["edge_cases"])
+
+
 def test_possible_hardcode_is_not_asserted_as_fact(monkeypatch) -> None:
     body = analyze(monkeypatch, code="print(42)", passed_tests=1, failed_tests=2).json()
     warning = body["hardcode_warnings"][0]
@@ -119,6 +170,22 @@ def test_model_result_keeps_coderunner_context() -> None:
     assert "1 тестов" in enriched["verdict"]
     assert enriched["failed_test_analysis"]
     assert enriched["hardcode_warnings"]
+
+
+def test_model_cannot_remove_static_structure_issue() -> None:
+    static = analyze_code(AnalyzeRequest(
+        task="Обязательно объявите функцию с помощью def circle_area(...).",
+        code="print(12.56)",
+        failed_tests=3,
+    ))
+    model = {
+        "verdict": "Вычисление почти готово, осталось проверить формат результата.",
+        "strengths": ["Есть числовой результат."],
+        "issues": [],
+        "next_step": "Проверьте формат.",
+    }
+    enriched = merge_model_response(model, static).model_dump()
+    assert any(issue["title"] == "Требуется функция" for issue in enriched["issues"])
 
 
 def test_malformed_model_fields_are_safely_normalized() -> None:

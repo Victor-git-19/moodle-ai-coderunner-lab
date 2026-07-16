@@ -69,6 +69,19 @@ def _complexity(value: object, fallback: dict[str, str]) -> dict[str, str]:
     }
 
 
+def _merge_issues(model_value: object, static_issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Сохранить обязательные статические ошибки и добавить замечания модели."""
+
+    result = list(static_issues)
+    known = {(item["title"], item.get("line")) for item in result}
+    for item in _issues(model_value, []):
+        key = (item["title"], item.get("line"))
+        if key not in known:
+            result.append(item)
+            known.add(key)
+    return result
+
+
 def response_data(
     *,
     verdict: str,
@@ -106,7 +119,7 @@ def merge_model_response(model_data: dict[str, Any], static_data: dict[str, Any]
     result = {
         "verdict": _text(model_data.get("verdict"), static_data["verdict"]),
         "strengths": _string_list(model_data.get("strengths"), static_data["strengths"]),
-        "issues": _issues(model_data.get("issues"), static_data["issues"]),
+        "issues": _merge_issues(model_data.get("issues"), static_data["issues"]),
         "failed_test_analysis": _string_list(
             model_data.get("failed_test_analysis"), static_data["failed_test_analysis"]
         ),
